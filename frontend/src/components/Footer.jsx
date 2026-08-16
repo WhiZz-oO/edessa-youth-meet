@@ -42,7 +42,7 @@ export default function Footer({ onOpenRegister }) {
                 onClick={onOpenRegister}
                 className="px-4 py-2 rounded-xl bg-orange-gradient text-white text-xs font-bold shadow-md border border-[#e5c158]/50 hover:scale-105 transition-transform"
               >
-                Register Now • ₹100
+                Register Now • ₹150
               </button>
             </div>
           </div>
@@ -72,7 +72,7 @@ export default function Footer({ onOpenRegister }) {
               <p className="text-[#f4ece1]"><strong>Event:</strong> EDESSA Youth Meet 2026</p>
               <p className="text-[#f4ece1]"><strong>Date:</strong> 25 August 2026 (Tuesday)</p>
               <p className="text-[#f4ece1]"><strong>Venue:</strong> 12 Apostles Auditorium, Chemmalamattom</p>
-              <p className="text-[#ff9e58] font-bold"><strong>Fee:</strong> ₹100 per participant</p>
+              <p className="text-[#ff9e58] font-bold"><strong>Fee:</strong> ₹150 per participant</p>
             </div>
           </div>
 

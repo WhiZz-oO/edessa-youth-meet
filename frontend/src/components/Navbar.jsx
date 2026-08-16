@@ -119,7 +119,7 @@ export default function Navbar({ onOpenRegister }) {
                 className="w-full py-3 rounded-xl bg-orange-gradient font-bold text-center text-white shadow-lg shadow-[#d96b27]/30 border border-[#e5c158]/50 flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4 text-[#ffe8aa]" />
-                Register Now (₹100)
+                Register Now (₹150)
               </button>
             </div>
           </div>
