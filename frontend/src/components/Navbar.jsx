@@ -1,3 +1,4 @@
+﻿import smymLogo from '../assets/smym-logo.png';
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Cross, Calendar, MapPin, Sparkles } from 'lucide-react';
 import { EVENT_DETAILS } from '../data/mockData';
@@ -39,8 +40,8 @@ export default function Navbar({ onOpenRegister }) {
         {/* Logo Branding */}
         <a href="#home" className="flex items-center gap-3 group">
           <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-[#d96b27] via-[#4a2c1d] to-[#150d09] p-0.5 shadow-lg shadow-[#d96b27]/20 border border-[#e5c158]/50 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-            <div className="w-full h-full rounded-full bg-[#1e120b] flex items-center justify-center">
-              <Cross className="w-5 h-5 text-[#e5c158] group-hover:rotate-12 transition-transform duration-300" />
+            <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden p-0.5">
+              <img src={smymLogo} alt="SMYM Logo" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
             </div>
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#d96b27] animate-ping" />
           </div>

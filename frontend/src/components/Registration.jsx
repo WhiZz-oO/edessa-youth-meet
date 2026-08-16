@@ -301,19 +301,49 @@ export default function Registration({ isOpen, onClose }) {
               {/* Parish / Unit */}
               <div>
                 <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
-                  Parish / SMYM Unit <span className="text-red-400">*</span>
+                  Ward Number <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <Cross className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-[#e5c158]/60" />
-                  <input
-                    type="text"
-                    name="parish"
-                    required
-                    value={formData.parish}
-                    onChange={handleChange}
-                    placeholder="e.g. Chemmalamattom / Palai Parish"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#1a0f0a] border border-[#d4af37]/30 text-white placeholder-gray-500 focus:outline-none focus:border-[#d96b27] text-sm"
-                  />
+                  <select
+                name="parish"
+                value={formData.parish}
+                onChange={handleChange}
+                required
+                className="w-full bg-[#1a0f0a] border border-[#4a2c1d] rounded-xl px-4 py-3 text-white font-garamond focus:outline-none focus:border-[#d96b27] transition-colors cursor-pointer appearance-none"
+              >
+                <option value="">Select your Ward</option>
+                <option key="1" value="Ward 1">Ward 1</option>
+                <option key="2" value="Ward 2">Ward 2</option>
+                <option key="3" value="Ward 3">Ward 3</option>
+                <option key="4" value="Ward 4">Ward 4</option>
+                <option key="5" value="Ward 5">Ward 5</option>
+                <option key="6" value="Ward 6">Ward 6</option>
+                <option key="7" value="Ward 7">Ward 7</option>
+                <option key="8" value="Ward 8">Ward 8</option>
+                <option key="9" value="Ward 9">Ward 9</option>
+                <option key="10" value="Ward 10">Ward 10</option>
+                <option key="11" value="Ward 11">Ward 11</option>
+                <option key="12" value="Ward 12">Ward 12</option>
+                <option key="13" value="Ward 13">Ward 13</option>
+                <option key="14" value="Ward 14">Ward 14</option>
+                <option key="15" value="Ward 15">Ward 15</option>
+                <option key="16" value="Ward 16">Ward 16</option>
+                <option key="17" value="Ward 17">Ward 17</option>
+                <option key="18" value="Ward 18">Ward 18</option>
+                <option key="19" value="Ward 19">Ward 19</option>
+                <option key="20" value="Ward 20">Ward 20</option>
+                <option key="21" value="Ward 21">Ward 21</option>
+                <option key="22" value="Ward 22">Ward 22</option>
+                <option key="23" value="Ward 23">Ward 23</option>
+                <option key="24" value="Ward 24">Ward 24</option>
+                <option key="25" value="Ward 25">Ward 25</option>
+                <option key="26" value="Ward 26">Ward 26</option>
+                <option key="27" value="Ward 27">Ward 27</option>
+                <option key="28" value="Ward 28">Ward 28</option>
+                <option key="29" value="Ward 29">Ward 29</option>
+                <option key="30" value="Ward 30">Ward 30</option>
+              </select>
                 </div>
               </div>
 
