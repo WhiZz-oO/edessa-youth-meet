@@ -12,7 +12,7 @@ export const EVENT_DETAILS = {
   scriptureRef: "Isaiah 60:1",
   tagline: "Arise. Shine. Witness.",
   audience: "Only for Chemmalamattom Parish Youth",
-  registrationFee: "Registration Required",
+  registrationFee: "₹150 per person",
   gpayNumber: "+91 98765 43210",
   gpayUpiId: "smymchemmalamattom@okicici",
 };
@@ -186,3 +186,4 @@ export const CONTACT_INFO = {
     whatsapp: "https://wa.me/919496123456",
   }
 };
+

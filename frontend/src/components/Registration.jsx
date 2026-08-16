@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, QrCode, 
   Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross 
@@ -153,7 +153,7 @@ export default function Registration({ isOpen, onClose }) {
             Register for EDESSA 2026
           </h2>
           <p className="text-sm sm:text-base text-[#f4ece1]/80 max-w-xl mx-auto font-light">
-            Complete the details below, transfer the ₹100 registration fee via GPay/UPI, and upload your payment screenshot to receive your delegate pass.
+            Complete the details below, transfer the ₹150 registration fee via GPay/UPI, and upload your payment screenshot to receive your delegate pass.
           </p>
         </div>
 
@@ -170,7 +170,7 @@ export default function Registration({ isOpen, onClose }) {
                 <h3 className="font-cinzel text-xl font-bold text-white">GPay / UPI Payment</h3>
               </div>
               <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#d96b27] text-white">
-                ₹100
+                ₹150
               </span>
             </div>
 
@@ -202,7 +202,7 @@ export default function Registration({ isOpen, onClose }) {
             <div className="p-4 bg-white rounded-2xl shadow-xl text-center border-2 border-[#e5c158] flex flex-col items-center justify-center">
               <QrCode className="w-32 h-32 text-[#150d09]" />
               <p className="text-xs font-bold text-[#150d09] mt-2 font-cinzel">
-                Scan & Pay ₹100 via GPay / PhonePe / Paytm
+                Scan & Pay ₹150 via GPay / PhonePe / Paytm
               </p>
               <p className="text-[10px] text-gray-600">
                 Take a screenshot of the completed payment
@@ -499,3 +499,4 @@ export default function Registration({ isOpen, onClose }) {
     </section>
   );
 }
+
