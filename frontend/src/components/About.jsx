@@ -115,7 +115,7 @@ export default function About() {
                 SMYM Chemmalamattom Unit
               </h4>
               <p className="text-xs sm:text-sm text-[#f4ece1]/80 mt-0.5 font-light">
-                Syro-Malabar Youth Movement • St. Thomas Catholic Church, Chemmalamattom
+                Syro-Malabar Youth Movement • 12 Apostles church , Chemmalamattom
               </p>
             </div>
           </div>

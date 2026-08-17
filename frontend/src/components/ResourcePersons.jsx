@@ -12,13 +12,6 @@ const LOCAL_PHOTOS = {
   3: joseVince,
 };
 
-// Custom zoom/positioning so all three resource persons have matching head and portrait sizes
-const PHOTO_WRAPPERS = {
-  1: "w-full h-full",
-  2: "w-full h-full scale-[1.48] origin-[50%_22%]",
-  3: "w-full h-full",
-};
-
 export default function ResourcePersons() {
   return (
     <section id="speakers" className="py-20 bg-cream-section relative overflow-hidden text-[#2a1a12]">
@@ -50,17 +43,15 @@ export default function ResourcePersons() {
             >
               {/* Photo Container */}
               <div className="relative h-72 overflow-hidden bg-[#1a0f0a]">
-                <div className={PHOTO_WRAPPERS[person.id] || "w-full h-full"}>
-                  <img
-                    src={LOCAL_PHOTOS[person.id]}
-                    alt={person.name}
-                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      if (e.target.nextSibling) e.target.nextSibling.style.display = "flex";
-                    }}
-                  />
-                </div>
+                <img
+                  src={LOCAL_PHOTOS[person.id]}
+                  alt={person.name}
+                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    if (e.target.nextSibling) e.target.nextSibling.style.display = "flex";
+                  }}
+                />
 
                 {/* Fallback avatar */}
                 <div
