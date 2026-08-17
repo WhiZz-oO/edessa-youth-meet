@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
   Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross,
-  CreditCard, Banknote, HelpCircle, ArrowRight
+  CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { EVENT_DETAILS } from '../data/mockData';
 import TicketModal from './TicketModal';
-import gpayQr from '../assets/gpay-qr.jpg';
+import gpayQr from '../assets/gpay-qr.png';
 
 export default function Registration({ isOpen, onClose }) {
   const [paymentMode, setPaymentMode] = useState('gpay'); // 'gpay' or 'cash'
+  const [copiedUpi, setCopiedUpi] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -31,6 +32,8 @@ export default function Registration({ isOpen, onClose }) {
   const [registeredList, setRegisteredList] = useState([]);
   const [showAdminModal, setShowAdminModal] = useState(false);
 
+  const upiPayUrl = `upi://pay?pa=${EVENT_DETAILS.gpayUpiId}&pn=Albin%20Mathews&am=150&cu=INR&tn=EDESSA%202026%20Registration`;
+
   useEffect(() => {
     const saved = localStorage.getItem('edessa_registrations');
     if (saved) {
@@ -47,6 +50,12 @@ export default function Registration({ isOpen, onClose }) {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleCopyUpi = () => {
+    navigator.clipboard.writeText(EVENT_DETAILS.gpayUpiId);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2500);
   };
 
   const handlePaymentModeChange = (mode) => {
@@ -217,18 +226,59 @@ export default function Registration({ isOpen, onClose }) {
                     <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Payment Mode</span>
                     <h3 className="font-cinzel text-xl font-bold text-white">GPay / UPI Payment</h3>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#d96b27] text-white">
+                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#d96b27] text-white shadow-md">
                     ₹150
                   </span>
                 </div>
 
+                {/* Direct Tap to Pay on Mobile */}
+                <a
+                  href={upiPayUrl}
+                  className="w-full py-3 px-4 rounded-xl bg-orange-gradient text-white font-bold text-xs sm:text-sm shadow-lg shadow-[#d96b27]/30 border border-[#e5c158]/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-center"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Tap to Pay ₹150 via UPI App</span>
+                </a>
+
+                {/* QR Code Container */}
+                <div className="bg-[#2a1a12] p-4 rounded-2xl border border-[#4a2c1d] flex flex-col items-center text-center shadow-inner">
+                  <div className="w-56 h-56 bg-white rounded-2xl p-2.5 shadow-2xl border-2 border-[#e5c158] flex items-center justify-center overflow-hidden">
+                    <img src={gpayQr} alt="GPay UPI QR Code - albinmathewsktu70@okaxis" className="w-full h-full object-contain rounded-xl" />
+                  </div>
+                  <p className="text-xs font-bold text-[#e5c158] mt-3 font-cinzel tracking-wide">
+                    Scan & Pay ₹150 via GPay / PhonePe / Paytm / BHIM
+                  </p>
+                  <p className="text-[11px] text-[#f4ece1]/70 mt-0.5">
+                    Amount (₹150) & Note are pre-configured in QR code
+                  </p>
+                </div>
+
                 {/* UPI Details Box */}
                 <div className="p-4 rounded-2xl bg-[#2a1a12] border border-[#4a2c1d] space-y-3 text-xs">
-                  <div>
-                    <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">UPI ID</p>
-                    <p className="font-mono text-sm font-bold text-[#e5c158] select-all">
-                      {EVENT_DETAILS.gpayUpiId}
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">UPI ID</p>
+                      <p className="font-mono text-sm font-bold text-[#e5c158]">
+                        {EVENT_DETAILS.gpayUpiId}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyUpi}
+                      className="px-3 py-1.5 rounded-lg bg-[#3d2417] text-[#e5c158] hover:bg-[#d96b27] hover:text-white transition-colors flex items-center gap-1 font-bold text-xs"
+                    >
+                      {copiedUpi ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-green-400" />
+                          <span className="text-green-400">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   <div>
@@ -246,22 +296,9 @@ export default function Registration({ isOpen, onClose }) {
                   </div>
                 </div>
 
-                {/* QR Code Container */}
-                <div className="bg-[#2a1a12] p-4 rounded-2xl border border-[#4a2c1d] flex flex-col items-center text-center">
-                  <div className="w-52 h-52 bg-white rounded-2xl p-2.5 shadow-xl border-2 border-[#e5c158]/50 flex items-center justify-center overflow-hidden">
-                    <img src={gpayQr} alt="GPay UPI QR Code" className="w-full h-full object-contain rounded-xl" />
-                  </div>
-                  <p className="text-xs font-bold text-[#e5c158] mt-3 font-cinzel">
-                    Scan & Pay ₹150 via GPay / PhonePe / Paytm
-                  </p>
-                  <p className="text-[11px] text-[#f4ece1]/60 mt-0.5">
-                    Take a screenshot of the completed transaction
-                  </p>
-                </div>
-
                 {/* Verification Note */}
                 <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70 space-y-1">
-                  <p>📌 Note: Screenshot must clearly show Transaction ID or Ref number.</p>
+                  <p>📌 Note: Screenshot must clearly show Transaction ID or Reference number.</p>
                 </div>
               </>
             ) : (

@@ -13,8 +13,8 @@ export const EVENT_DETAILS = {
   tagline: "Arise. Shine. Witness.",
   audience: "Only for Chemmalamattom Parish Youth",
   registrationFee: "Rs.150 per person",
-  gpayNumber: "+91 92072 15221",
-  gpayUpiId: "smymchemmalamattom@okicici",
+  gpayNumber: "+91 9207215221",
+  gpayUpiId: "albinmathewsktu70@okaxis",
 };
 
 export const SCHEDULE_DATA = [
@@ -141,8 +141,8 @@ export const GALLERY_ITEMS = [];
 
 export const SPONSORS_DATA = {
   titleSponsors: [
-    { name: "K K Thomas Kummannuparambil", logo: "cross", category: "Title Sponsor" },
-    { name: "Tijo Vadakkel", logo: "star", category: "Co-Sponsor" },
+    { name: "K K Thomas Kummannuparambil",  category: "Title Sponsor" },
+    { name: "Tijo Vadakkel", category: "Co-Sponsor" },
   ],
   goldSponsors: [],
   silverSponsors: [],
@@ -155,13 +155,13 @@ export const CONTACT_INFO = {
   contacts: [
     { title: "SMYM Unit President", name: "Albin Mathews", phone: "9207215221" },
     { title: "SMYM Unit Secretary", name: "Ivin Sherin Thayyil", phone: "9778324243" },
-    { title: "Programme Convener", name: "Anwin C M", phone: "8921320980" },
+    { title: "Programme Convener", name: "Anwin C M", phone: "8921332098" },
   ],
   email: "smymchemmalamattom@gmail.com",
   socials: {
-    instagram: "https://instagram.com/smym_chemmalamattom",
-    facebook: "https://facebook.com/smymchemmalamattom",
-    youtube: "https://youtube.com/@smymchemmalamattom",
+    instagram: "https://www.instagram.com/smym_chemmalamattom?igsh=eHh3NW5ndG55ODFs&igsi=eHh3NW5ndG55ODFs",
+    facebook: "https://www.facebook.com/share/1EjsiSsQfA/",
+    youtube: "https://youtube.com/@smymchemmalamattom2026?si=rzGAUrBUmtvnsHtK",
     whatsapp: "https://wa.me/919207215221",
   }
 };

@@ -48,8 +48,8 @@ export default function Contact() {
                 ))}
               </div>
 
-              {/* Email */}
-              <div className="pt-4 border-t border-[#4a2c1d] flex items-center justify-between">
+            {/* Email */}
+               <div className="pt-4 border-t border-[#4a2c1d] flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-[#3d2417] text-[#e5c158]">
                     <Mail className="w-5 h-5" />
@@ -67,6 +67,7 @@ export default function Contact() {
                 </a>
               </div>
             </div>
+           
 
             {/* Socials */}
             <div className="bg-[#1c120c] p-6 rounded-3xl border border-[#d4af37]/20 flex items-center justify-between">
