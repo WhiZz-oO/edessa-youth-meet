@@ -757,25 +757,28 @@ export default function Registration({ isOpen, onClose }) {
                     )}
                   </div>
 
-                  {/* Explicit 12-Digit UPI Transaction ID Input */}
-                  {(screenshotPreview || txnRef) && (
-                    <div className="p-3.5 rounded-2xl bg-[#1a0f0a] border border-[#d4af37]/30 space-y-1.5">
-                      <label className="block text-[11px] font-bold uppercase text-[#e5c158]">
-                        12-Digit UPI Transaction ID (from GPay screenshot) <span className="text-red-400">*</span>
-                      </label>
+                  {/* Read-Only Verified UPI Transaction ID Display */}
+                  {txnRef && (
+                    <div className="p-3.5 rounded-2xl bg-[#1a0f0a] border border-green-500/30 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[11px] font-bold uppercase text-[#e5c158] flex items-center gap-1.5">
+                          <Key className="w-3.5 h-3.5 text-green-400" />
+                          <span>Extracted UPI Transaction ID (Read-Only)</span>
+                        </label>
+                        <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
+                          🔒 Verified
+                        </span>
+                      </div>
                       <div className="relative">
-                        <Key className="w-3.5 h-3.5 text-[#e5c158] absolute left-3 top-3" />
                         <input
                           type="text"
-                          required
+                          readOnly
                           value={txnRef}
-                          onChange={(e) => handleTxnChange(e.target.value)}
-                          placeholder="e.g. 622275642244"
-                          className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#2a1a12] border border-[#d4af37]/40 text-white font-mono text-xs focus:outline-none focus:border-[#d96b27]"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-[#2a1a12] border border-green-500/40 text-green-400 font-mono text-xs cursor-not-allowed select-all focus:outline-none opacity-90"
                         />
                       </div>
                       <p className="text-[10px] text-[#f4ece1]/60">
-                        Verify this matches the 12-digit number (e.g. 622275642244) on your Google Pay screen.
+                        Auto-extracted from your uploaded payment screenshot.
                       </p>
                     </div>
                   )}
