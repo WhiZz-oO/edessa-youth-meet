@@ -16,7 +16,7 @@ export default function About() {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4a2c1d]/10 text-[#d96b27] text-xs font-extrabold uppercase tracking-widest mb-3">
             <Cross className="w-3.5 h-3.5" />
-            Discover the Movement
+            Discover the Meet
           </div>
           <h2 className="font-cinzel text-3xl sm:text-5xl font-bold tracking-tight text-[#1c120c] mb-4">
             About <span className="text-orange-gradient font-black">EDESSA</span>
