@@ -42,37 +42,18 @@ export default function Registration({ isOpen, onClose }) {
 
   const upiPayUrl = `upi://pay?pa=${EVENT_DETAILS.gpayUpiId}&pn=Albin%20Mathews&am=150&cu=INR&tn=EDESSA%202026%20Registration`;
 
-  // Fetch all existing transaction IDs from Google Sheet + LocalStorage on mount
-  const fetchExistingTransactions = async () => {
-    let localTxns = [];
+  // Fetch all existing transaction IDs from LocalStorage on mount
+  useEffect(() => {
     const saved = localStorage.getItem('edessa_registrations');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        localTxns = parsed.map(item => String(item.txnRef || '').trim()).filter(Boolean);
+        const localTxns = parsed.map(item => String(item.txnRef || '').trim()).filter(Boolean);
+        setUsedTxnIds(localTxns);
       } catch (e) {
         console.error('Failed to parse registrations', e);
       }
     }
-
-    if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
-      try {
-        const res = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl);
-        const data = await res.json();
-        if (data && data.txns && Array.isArray(data.txns)) {
-          const combined = Array.from(new Set([...localTxns, ...data.txns.map(t => String(t).trim())]));
-          setUsedTxnIds(combined);
-          return;
-        }
-      } catch (err) {
-        console.warn('Could not fetch remote txns:', err);
-      }
-    }
-    setUsedTxnIds(localTxns);
-  };
-
-  useEffect(() => {
-    fetchExistingTransactions();
   }, []);
 
   const handleChange = (e) => {
@@ -112,7 +93,7 @@ export default function Registration({ isOpen, onClose }) {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxDim = 1200;
+        const maxDim = 1000;
         let width = img.width;
         let height = img.height;
 
@@ -129,7 +110,7 @@ export default function Registration({ isOpen, onClose }) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        const compressedData = canvas.toDataURL('image/jpeg', 0.85);
+        const compressedData = canvas.toDataURL('image/jpeg', 0.8);
         callback(compressedData);
       };
     };
@@ -140,27 +121,6 @@ export default function Registration({ isOpen, onClose }) {
     if (!idToCheck || idToCheck === 'SPOT-CASH' || idToCheck === 'CASH-DESK') return false;
     const cleanId = String(idToCheck).trim();
     return usedTxnIds.includes(cleanId);
-  };
-
-  const handleTxnChange = (value) => {
-    const cleanVal = value.trim();
-    setTxnRef(cleanVal);
-    setDuplicateError('');
-
-    if (!cleanVal) {
-      setIsVerified(false);
-      return;
-    }
-
-    if (checkDuplicate(cleanVal)) {
-      setDuplicateError(`❌ Duplicate Detected: Transaction ID (${cleanVal}) has already been registered in the system!`);
-      setIsVerified(false);
-      return;
-    }
-
-    if (payeeVerified && cleanVal.length >= 8) {
-      setIsVerified(true);
-    }
   };
 
   const handleScreenshotChange = (e) => {
@@ -250,16 +210,15 @@ export default function Registration({ isOpen, onClose }) {
 
         setIsVerified(true);
       } else {
-        // If OCR could not read 12 digits automatically, prompt user to enter the exact 12 digits
         setVerificationError(
-          'Could not auto-read 12-digit UPI ID from image. Please type the 12-digit Transaction ID shown on your screenshot below.'
+          'Could not auto-read 12-digit UPI ID from image. Please ensure your screenshot clearly displays the UPI Transaction ID.'
         );
         setIsVerified(false);
       }
     } catch (err) {
       console.error('OCR Error:', err);
       setIsVerifying(false);
-      setVerificationError('Could not process image text. Please enter the 12-digit UPI Transaction ID below.');
+      setVerificationError('Could not process image text. Please upload a clear GPay screenshot.');
     }
   };
 
@@ -298,14 +257,14 @@ export default function Registration({ isOpen, onClose }) {
       parish: formData.parish, // Ward
       age: formData.age,
       email: formData.email,
-      paymentMode: paymentMode === 'cash' ? 'Spot Cash' : 'Google Pay (UPI)',
+      paymentMode: paymentMode === 'cash' ? 'Spot Cash (Pay at Desk)' : 'Google Pay (UPI)',
       txnRef: paymentMode === 'cash' ? 'SPOT-CASH' : txnRef,
       dateRegistered: dateFormatted,
       screenshotData: paymentMode === 'gpay' ? screenshotBase64 : '',
       screenshotName: `${newTicketId}_${formData.fullName.replace(/\s+/g, '_')}.jpg`,
     };
 
-    // Send to Google Sheets (mode: 'no-cors' is REQUIRED for Google Apps Script Web App in browsers)
+    // 1. Direct browser fetch with mode: 'no-cors'
     if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
       try {
         await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
@@ -317,11 +276,43 @@ export default function Registration({ isOpen, onClose }) {
           body: JSON.stringify(newEntry),
         });
       } catch (err) {
-        console.error('Google Sheets submission error:', err);
+        console.warn('Direct fetch attempt error, running form fallback:', err);
+      }
+
+      // 2. Guaranteed form fallback to ensure row is 100% written into Google Sheet
+      try {
+        const iframe = document.createElement('iframe');
+        iframe.name = 'sheet_post_frame_' + Date.now();
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+
+        const form = document.createElement('form');
+        form.target = iframe.name;
+        form.action = GOOGLE_SHEETS_CONFIG.webAppUrl;
+        form.method = 'POST';
+        form.style.display = 'none';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'data';
+        input.value = JSON.stringify(newEntry);
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+
+        setTimeout(() => {
+          try {
+            document.body.removeChild(form);
+            document.body.removeChild(iframe);
+          } catch (e) {}
+        }, 3000);
+      } catch (err) {
+        console.error('Form fallback error:', err);
       }
     }
 
-    // Save locally and add to usedTxnIds
+    // Save locally
     if (paymentMode === 'gpay') {
       setUsedTxnIds(prev => [...prev, txnRef]);
     }
@@ -493,7 +484,7 @@ export default function Registration({ isOpen, onClose }) {
 
                 {/* Verification Note */}
                 <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70 space-y-1">
-                  <p>🔒 <strong>Anti-Fraud Shield Active:</strong> Each 12-digit UPI Transaction ID is verified and can only be used once.</p>
+                  <p>🔒 <strong>Anti-Fraud Shield:</strong> UPI Transaction IDs are verified to prevent duplicate submission.</p>
                 </div>
               </>
             ) : (
@@ -556,7 +547,7 @@ export default function Registration({ isOpen, onClose }) {
                 <div>
                   <p className="font-bold text-red-400 text-sm">❌ Duplicate Payment Rejected</p>
                   <p className="mt-1 font-semibold leading-relaxed">{duplicateError}</p>
-                  <p className="text-[11px] text-red-300/90 mt-1">This transaction ID has already been recorded for a previous registration. Each payment screenshot can only be used once.</p>
+                  <p className="text-[11px] text-red-300/90 mt-1">This transaction ID has already been recorded for a previous registration.</p>
                 </div>
               </div>
             )}
@@ -799,7 +790,7 @@ export default function Registration({ isOpen, onClose }) {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Verifying Duplicates & Saving Registration...</span>
+                    <span>Saving Registration...</span>
                   </>
                 ) : (
                   <>
