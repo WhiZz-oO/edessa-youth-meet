@@ -1,6 +1,5 @@
 import React from 'react';
-import { X, CheckCircle, Printer, Download, Cross, Sparkles, MapPin, Calendar } from 'lucide-react';
-import { EVENT_DETAILS } from '../data/mockData';
+import { X, CheckCircle, Printer, Cross, Sparkles, MapPin, Calendar, Banknote, CreditCard } from 'lucide-react';
 
 export default function TicketModal({ ticketData, onClose }) {
   if (!ticketData) return null;
@@ -8,6 +7,8 @@ export default function TicketModal({ ticketData, onClose }) {
   const handlePrint = () => {
     window.print();
   };
+
+  const isCash = ticketData.paymentMode === 'cash';
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
@@ -20,7 +21,7 @@ export default function TicketModal({ ticketData, onClose }) {
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-[#ffe8aa]" />
             <span className="font-cinzel text-sm font-bold tracking-wider uppercase">
-              Official Registration Ticket Pass
+              Official Delegate Ticket Pass
             </span>
           </div>
           <button
@@ -49,10 +50,17 @@ export default function TicketModal({ ticketData, onClose }) {
             </div>
 
             <div className="text-right">
-              <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-green-500/20 text-green-400 border border-green-500/40 inline-flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" />
-                Payment Verified
-              </span>
+              {isCash ? (
+                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1">
+                  <Banknote className="w-3 h-3" />
+                  Spot Cash (Pay at Desk)
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-green-500/20 text-green-400 border border-green-500/40 inline-flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  GPay Verified
+                </span>
+              )}
               <p className="text-[10px] font-mono text-[#f4ece1]/60 mt-1">
                 Pass ID: <span className="text-white font-bold">{ticketData.ticketId}</span>
               </p>
@@ -67,7 +75,7 @@ export default function TicketModal({ ticketData, onClose }) {
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase text-[#e5c158]">Parish / Unit</p>
+              <p className="text-[10px] font-bold uppercase text-[#e5c158]">Ward</p>
               <p className="text-sm font-semibold text-[#f4ece1] mt-0.5">{ticketData.parish}</p>
             </div>
 
@@ -94,15 +102,18 @@ export default function TicketModal({ ticketData, onClose }) {
                 <MapPin className="w-3.5 h-3.5 text-[#d96b27]" />
                 <span>12 Apostles Auditorium, Chemmalamattom</span>
               </div>
-              <p className="text-[10px] text-green-400 font-medium">
-                GPay Txn Ref: #{ticketData.txnRef}
+              <p className="text-[10px] text-[#ff9e58] font-medium flex items-center gap-1">
+                {isCash ? (
+                  <span>💵 Payment: ₹150 (Pay in cash at registration counter)</span>
+                ) : (
+                  <span>💳 GPay Ref: #{ticketData.txnRef}</span>
+                )}
               </p>
             </div>
 
-            {/* Styled QR Code Box */}
+            {/* Styled Gate Pass Box */}
             <div className="p-2 bg-white rounded-xl shadow-lg border border-[#e5c158] flex flex-col items-center flex-shrink-0">
               <svg className="w-20 h-20" viewBox="0 0 100 100">
-                {/* Simulated QR Code SVG pattern */}
                 <rect width="100" height="100" fill="#ffffff" />
                 <rect x="10" y="10" width="25" height="25" fill="#150d09" />
                 <rect x="15" y="15" width="15" height="15" fill="#ffffff" />
@@ -130,7 +141,7 @@ export default function TicketModal({ ticketData, onClose }) {
           </div>
 
           <p className="text-[10px] text-center text-[#f4ece1]/60 italic font-garamond text-xs">
-            * Please present this digital ticket or printed copy at the 12 Apostles Auditorium registration desk on arrival.
+            * Please present this digital ticket or printed pass at the 12 Apostles Auditorium registration desk upon arrival.
           </p>
 
         </div>

@@ -1,14 +1,16 @@
-import gpayQr from '../assets/gpay-qr.jpg';
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, QrCode, 
-  Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross 
+  CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
+  Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross,
+  CreditCard, Banknote, HelpCircle, ArrowRight
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { EVENT_DETAILS } from '../data/mockData';
 import TicketModal from './TicketModal';
+import gpayQr from '../assets/gpay-qr.jpg';
 
 export default function Registration({ isOpen, onClose }) {
+  const [paymentMode, setPaymentMode] = useState('gpay'); // 'gpay' or 'cash'
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -23,220 +25,307 @@ export default function Registration({ isOpen, onClose }) {
   const [isVerified, setIsVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [txnRef, setTxnRef] = useState('');
-
   const [generatedTicket, setGeneratedTicket] = useState(null);
+
+  // Mock local registration database
   const [registeredList, setRegisteredList] = useState([]);
   const [showAdminModal, setShowAdminModal] = useState(false);
 
-  // Load existing registrations from localStorage on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('edessa_registrations');
-      if (saved) {
+    const saved = localStorage.getItem('edessa_registrations');
+    if (saved) {
+      try {
         setRegisteredList(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse registrations', e);
       }
-    } catch (e) {
-      console.error("Failed to parse saved registrations", e);
     }
   }, []);
 
-  // Handle Input Changes
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
-  // Handle File Upload & Screenshot Verification
+  const handlePaymentModeChange = (mode) => {
+    setPaymentMode(mode);
+    setVerificationError('');
+    if (mode === 'cash') {
+      setIsVerified(true);
+      setTxnRef('CASH-DESK');
+    } else {
+      if (!screenshotFile) {
+        setIsVerified(false);
+        setTxnRef('');
+      }
+    }
+  };
+
   const handleScreenshotChange = (e) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
       setVerificationError('Please select a valid image file (PNG, JPG, JPEG)');
-      setIsVerified(false);
       return;
     }
 
     setScreenshotFile(file);
     setVerificationError('');
-    setIsVerifying(true);
     setIsVerified(false);
 
-    // Read Image Preview
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onload = () => {
       setScreenshotPreview(reader.result);
-      
-      // Simulate GPay Screenshot Verification Check
-      setTimeout(() => {
-        setIsVerifying(false);
-        setIsVerified(true);
-        // Generate mock transaction reference ID
-        const randomTxn = 'GPAY-' + Math.floor(100000000000 + Math.random() * 900000000000);
-        setTxnRef(randomTxn);
-      }, 1500);
+      simulateScreenshotVerification();
     };
     reader.readAsDataURL(file);
   };
 
-  // Submit Handler
+  const simulateScreenshotVerification = () => {
+    setIsVerifying(true);
+    setVerificationError('');
+
+    setTimeout(() => {
+      setIsVerifying(false);
+      const randomTxn = 'GPAY-' + Math.floor(100000000000 + Math.random() * 900000000000);
+      setTxnRef(randomTxn);
+      setIsVerified(true);
+    }, 1200);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!isVerified) {
+    if (paymentMode === 'gpay' && !isVerified) {
       setVerificationError('GPay payment screenshot verification is required before submission.');
       return;
     }
 
     const newTicketId = 'EDESSA-2026-' + Math.floor(1000 + Math.random() * 9000);
-
-    const registrationRecord = {
-      id: Date.now(),
+    const newEntry = {
       ticketId: newTicketId,
       fullName: formData.fullName,
       phone: formData.phone,
       parish: formData.parish,
       age: formData.age,
       email: formData.email,
-      txnRef: txnRef,
-      screenshotPreview: screenshotPreview,
-      dateRegistered: new Date().toLocaleString(),
+      paymentMode: paymentMode, // 'gpay' or 'cash'
+      txnRef: paymentMode === 'cash' ? 'SPOT-CASH' : txnRef,
+      dateRegistered: new Date().toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
     };
 
-    // Save to Local Mock Database
-    const updatedList = [registrationRecord, ...registeredList];
+    const updatedList = [newEntry, ...registeredList];
     setRegisteredList(updatedList);
-    try {
-      localStorage.setItem('edessa_registrations', JSON.stringify(updatedList));
-    } catch (e) {
-      console.warn("Storage quota limit reached for image previews", e);
-    }
+    localStorage.setItem('edessa_registrations', JSON.stringify(updatedList));
 
-    // Trigger celebration confetti
     confetti({
-      particleCount: 120,
+      particleCount: 100,
       spread: 70,
       origin: { y: 0.6 },
     });
 
-    // Set generated ticket to launch Ticket Modal
-    setGeneratedTicket(registrationRecord);
+    setGeneratedTicket(newEntry);
 
-    // Reset Form
+    // Reset form
     setFormData({ fullName: '', phone: '', parish: '', age: '', email: '' });
     setScreenshotFile(null);
     setScreenshotPreview(null);
-    setIsVerified(false);
+    if (paymentMode === 'gpay') {
+      setIsVerified(false);
+      setTxnRef('');
+    }
   };
 
-  // Clear mock database
   const handleClearDatabase = () => {
-    if (window.confirm("Are you sure you want to clear all mock registrations stored in browser?")) {
-      localStorage.removeItem('edessa_registrations');
+    if (window.confirm('Are you sure you want to clear all mock registrations?')) {
       setRegisteredList([]);
+      localStorage.removeItem('edessa_registrations');
     }
   };
 
   return (
-    <section id="register" className="py-20 bg-wood-dark relative overflow-hidden text-white">
-      
-      {/* Background Glow */}
-      <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-[#d96b27]/15 rounded-full blur-3xl pointer-events-none" />
+    <section id="register" className="py-24 bg-wood-dark relative overflow-hidden text-white">
+      {/* Background Ornaments */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-[#d96b27]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#d4af37]/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3d2417] text-[#e5c158] text-xs font-bold uppercase tracking-widest border border-[#d4af37]/30 mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-[#ffe8aa]" />
-            Official Registration
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#d96b27]/10 text-[#ff9e58] text-xs font-extrabold uppercase tracking-widest mb-3 border border-[#d96b27]/20 shadow-sm">
+            <Sparkles className="w-3.5 h-3.5" />
+            Registration Portal
           </div>
           <h2 className="font-cinzel text-3xl sm:text-5xl font-bold tracking-tight text-gold-gradient mb-4">
             Register for EDESSA 2026
           </h2>
-          <p className="text-sm sm:text-base text-[#f4ece1]/80 max-w-xl mx-auto font-light">
-            Complete the details below, transfer the ₹150 registration fee via GPay/UPI, and upload your payment screenshot to receive your delegate pass.
+          <p className="font-garamond text-xl italic text-[#f4ece1]/80">
+            Complete your delegate details and select your preferred payment mode (GPay / Cash)
           </p>
         </div>
 
+        {/* Payment Mode Selector Tabs */}
+        <div className="max-w-md mx-auto mb-10 p-1.5 rounded-2xl bg-[#1c120c] border border-[#d4af37]/30 flex items-center shadow-xl">
+          <button
+            type="button"
+            onClick={() => handlePaymentModeChange('gpay')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+              paymentMode === 'gpay'
+                ? 'bg-orange-gradient text-white shadow-lg border border-[#e5c158]/50 scale-[1.02]'
+                : 'text-[#f4ece1]/70 hover:text-white hover:bg-[#2a1a12]'
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            Google Pay / UPI
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handlePaymentModeChange('cash')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+              paymentMode === 'cash'
+                ? 'bg-orange-gradient text-white shadow-lg border border-[#e5c158]/50 scale-[1.02]'
+                : 'text-[#f4ece1]/70 hover:text-white hover:bg-[#2a1a12]'
+            }`}
+          >
+            <Banknote className="w-4 h-4" />
+            Spot Cash (Pay at Desk)
+          </button>
+        </div>
+
+        {/* Form & Payment Container */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Column: GPay Payment QR & Instructions */}
-          <div className="lg:col-span-5 bg-wood-card p-6 sm:p-8 rounded-3xl border-2 border-[#d4af37]/30 shadow-2xl space-y-6">
+
+          {/* Left Column: Payment Details */}
+          <div className="lg:col-span-5 bg-[#1c120c] p-6 sm:p-8 rounded-3xl border border-[#d4af37]/30 shadow-2xl space-y-6">
             
-            <div className="flex items-center justify-between border-b border-[#382015] pb-4">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#d96b27]">
-                  Step 1: Payment
-                </span>
-                <h3 className="font-cinzel text-xl font-bold text-white">GPay / UPI Payment</h3>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#d96b27] text-white">
-                ₹150
-              </span>
-            </div>
+            {paymentMode === 'gpay' ? (
+              /* GPay / UPI View */
+              <>
+                <div className="flex items-center justify-between border-b border-[#382015] pb-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Payment Mode</span>
+                    <h3 className="font-cinzel text-xl font-bold text-white">GPay / UPI Payment</h3>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#d96b27] text-white">
+                    ₹150
+                  </span>
+                </div>
 
-            {/* Payment Details Box */}
-            <div className="bg-[#1a0f0a] p-4 rounded-2xl border border-[#d4af37]/20 space-y-3">
-              <div>
-                <p className="text-[10px] uppercase font-bold text-[#e5c158]">UPI ID</p>
-                <p className="font-mono text-sm text-white font-bold tracking-wider">
-                  {EVENT_DETAILS.gpayUpiId}
-                </p>
-              </div>
+                {/* UPI Details Box */}
+                <div className="p-4 rounded-2xl bg-[#2a1a12] border border-[#4a2c1d] space-y-3 text-xs">
+                  <div>
+                    <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">UPI ID</p>
+                    <p className="font-mono text-sm font-bold text-[#e5c158] select-all">
+                      {EVENT_DETAILS.gpayUpiId}
+                    </p>
+                  </div>
 
-              <div>
-                <p className="text-[10px] uppercase font-bold text-[#e5c158]">GPay Contact Number</p>
-                <p className="font-mono text-sm text-[#ff9e58] font-bold">
-                  {EVENT_DETAILS.gpayNumber}
-                </p>
-              </div>
+                  <div>
+                    <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">GPay Contact Number</p>
+                    <p className="font-mono text-sm font-bold text-white">
+                      {EVENT_DETAILS.gpayNumber}
+                    </p>
+                  </div>
 
-              <div>
-                <p className="text-[10px] uppercase font-bold text-[#e5c158]">Beneficiary Name</p>
-                <p className="text-xs text-[#f4ece1] font-semibold">
-                  SMYM Chemmalamattom Unit
-                </p>
-              </div>
-            </div>
+                  <div>
+                    <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">Beneficiary Name</p>
+                    <p className="text-xs font-medium text-[#f4ece1]">
+                      Albin Mathews (SMYM Unit President)
+                    </p>
+                  </div>
+                </div>
 
-            {/* QR Code Graphic Box */}
-            <div className="p-4 bg-white rounded-2xl shadow-xl text-center border-2 border-[#e5c158] flex flex-col items-center justify-center">
-              <img src={gpayQr} alt="GPay UPI QR Code - albinmathewsktu70@okaxis" className="w-48 h-48 object-contain rounded-xl shadow-md border border-gray-200" />
-              <p className="text-xs font-bold text-[#150d09] mt-2 font-cinzel">
-                Scan & Pay ₹150 via GPay / PhonePe / Paytm
-              </p>
-              <p className="text-[10px] text-gray-600">
-                Take a screenshot of the completed payment
-              </p>
-            </div>
+                {/* QR Code Container */}
+                <div className="bg-[#2a1a12] p-4 rounded-2xl border border-[#4a2c1d] flex flex-col items-center text-center">
+                  <div className="w-52 h-52 bg-white rounded-2xl p-2.5 shadow-xl border-2 border-[#e5c158]/50 flex items-center justify-center overflow-hidden">
+                    <img src={gpayQr} alt="GPay UPI QR Code" className="w-full h-full object-contain rounded-xl" />
+                  </div>
+                  <p className="text-xs font-bold text-[#e5c158] mt-3 font-cinzel">
+                    Scan & Pay ₹150 via GPay / PhonePe / Paytm
+                  </p>
+                  <p className="text-[11px] text-[#f4ece1]/60 mt-0.5">
+                    Take a screenshot of the completed transaction
+                  </p>
+                </div>
 
-            <div className="text-xs text-[#f4ece1]/70 space-y-1 font-light">
-              <p>📌 Note: Screenshot must clearly show Transaction ID or Ref number.</p>
-              <p>📌 Only registrations with verified payment screenshots will be approved.</p>
-            </div>
+                {/* Verification Note */}
+                <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70 space-y-1">
+                  <p>📌 Note: Screenshot must clearly show Transaction ID or Ref number.</p>
+                </div>
+              </>
+            ) : (
+              /* Spot Cash View */
+              <>
+                <div className="flex items-center justify-between border-b border-[#382015] pb-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Payment Mode</span>
+                    <h3 className="font-cinzel text-xl font-bold text-white">Spot Cash Payment</h3>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#e5c158] text-[#1c120c]">
+                    ₹150
+                  </span>
+                </div>
 
-            {/* Admin Viewer Button */}
-            <div className="pt-4 border-t border-[#382015]">
+                <div className="py-8 px-4 rounded-2xl bg-[#2a1a12] border border-[#d4af37]/30 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-[#3d2417] text-[#e5c158] flex items-center justify-center mx-auto text-3xl shadow-inner border border-[#d4af37]/40">
+                    <Banknote className="w-8 h-8 text-[#e5c158]" />
+                  </div>
+
+                  <div>
+                    <h4 className="font-cinzel text-lg font-bold text-gold-gradient">
+                      Pay at Registration Desk
+                    </h4>
+                    <p className="text-xs text-[#f4ece1]/80 mt-2 leading-relaxed">
+                      You can pay the registration fee of <strong className="text-[#e5c158]">₹150 in cash</strong> directly at the counter upon arrival on <strong>25 August 2026</strong>.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#1c120c] border border-[#4a2c1d] text-left text-xs text-[#f4ece1]/75 space-y-1.5">
+                    <p className="flex items-center gap-1.5 text-green-400 font-semibold">
+                      <CheckCircle className="w-4 h-4" /> No screenshot upload required
+                    </p>
+                    <p className="flex items-center gap-1.5 text-[#ff9e58] font-semibold">
+                      <Sparkles className="w-4 h-4" /> Instant ticket generation
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70">
+                  <p>📍 <strong>Venue:</strong> 12 Apostles Auditorium, Chemmalamattom</p>
+                </div>
+              </>
+            )}
+
+            {/* View Stored Local DB link */}
+            <div className="pt-2 text-center">
               <button
                 type="button"
                 onClick={() => setShowAdminModal(true)}
-                className="w-full py-2.5 rounded-xl bg-[#1c120c] hover:bg-[#382015] text-[#e5c158] text-xs font-bold border border-[#d4af37]/30 transition-colors flex items-center justify-center gap-2"
+                className="text-xs text-[#e5c158]/70 hover:text-[#e5c158] underline font-garamond"
               >
-                <Eye className="w-4 h-4 text-[#d96b27]" />
-                View Saved Submissions ({registeredList.length})
+                View Saved Registrations ({registeredList.length})
               </button>
             </div>
 
           </div>
 
-          {/* Right Column: Main Registration Form */}
-          <div className="lg:col-span-7 bg-wood-card p-6 sm:p-8 rounded-3xl border-2 border-[#d4af37]/30 shadow-2xl">
+          {/* Right Column: Delegate Information Form */}
+          <div className="lg:col-span-7 bg-[#1c120c] p-6 sm:p-8 rounded-3xl border border-[#d4af37]/30 shadow-2xl">
             
             <div className="border-b border-[#382015] pb-4 mb-6">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#d96b27]">
-                Step 2: Delegate Information & Verification
-              </span>
-              <h3 className="font-cinzel text-2xl font-bold text-white">Fill Registration Details</h3>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Step 2: Information</span>
+              <h3 className="font-cinzel text-xl font-bold text-white">Fill Registration Details</h3>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -247,7 +336,7 @@ export default function Registration({ isOpen, onClose }) {
                   Full Name <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
-                  <User className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-[#e5c158]/60" />
+                  <User className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3.5" />
                   <input
                     type="text"
                     name="fullName"
@@ -260,19 +349,18 @@ export default function Registration({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Phone & Age Row */}
+              {/* Phone & Age */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
                     Phone Number <span className="text-red-400">*</span>
                   </label>
                   <div className="relative">
-                    <Phone className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-[#e5c158]/60" />
+                    <Phone className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3.5" />
                     <input
                       type="tel"
                       name="phone"
                       required
-                      pattern="[0-9]{10}"
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="10 digit mobile number"
@@ -299,62 +387,37 @@ export default function Registration({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Parish / Unit */}
+              {/* Ward Dropdown */}
               <div>
                 <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
                   Ward Number <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
-                  <Cross className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-[#e5c158]/60" />
+                  <MapPin className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3.5" />
                   <select
-                name="parish"
-                value={formData.parish}
-                onChange={handleChange}
-                required
-                className="w-full bg-[#1a0f0a] border border-[#4a2c1d] rounded-xl px-4 py-3 text-white font-garamond focus:outline-none focus:border-[#d96b27] transition-colors cursor-pointer appearance-none"
-              >
-                <option value="">Select your Ward</option>
-                <option key="1" value="Ward 1">Ward 1</option>
-                <option key="2" value="Ward 2">Ward 2</option>
-                <option key="3" value="Ward 3">Ward 3</option>
-                <option key="4" value="Ward 4">Ward 4</option>
-                <option key="5" value="Ward 5">Ward 5</option>
-                <option key="6" value="Ward 6">Ward 6</option>
-                <option key="7" value="Ward 7">Ward 7</option>
-                <option key="8" value="Ward 8">Ward 8</option>
-                <option key="9" value="Ward 9">Ward 9</option>
-                <option key="10" value="Ward 10">Ward 10</option>
-                <option key="11" value="Ward 11">Ward 11</option>
-                <option key="12" value="Ward 12">Ward 12</option>
-                <option key="13" value="Ward 13">Ward 13</option>
-                <option key="14" value="Ward 14">Ward 14</option>
-                <option key="15" value="Ward 15">Ward 15</option>
-                <option key="16" value="Ward 16">Ward 16</option>
-                <option key="17" value="Ward 17">Ward 17</option>
-                <option key="18" value="Ward 18">Ward 18</option>
-                <option key="19" value="Ward 19">Ward 19</option>
-                <option key="20" value="Ward 20">Ward 20</option>
-                <option key="21" value="Ward 21">Ward 21</option>
-                <option key="22" value="Ward 22">Ward 22</option>
-                <option key="23" value="Ward 23">Ward 23</option>
-                <option key="24" value="Ward 24">Ward 24</option>
-                <option key="25" value="Ward 25">Ward 25</option>
-                <option key="26" value="Ward 26">Ward 26</option>
-                <option key="27" value="Ward 27">Ward 27</option>
-                <option key="28" value="Ward 28">Ward 28</option>
-                <option key="29" value="Ward 29">Ward 29</option>
-                <option key="30" value="Ward 30">Ward 30</option>
-              </select>
+                    name="parish"
+                    value={formData.parish}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#1a0f0a] border border-[#d4af37]/30 text-white placeholder-gray-500 focus:outline-none focus:border-[#d96b27] text-sm cursor-pointer appearance-none"
+                  >
+                    <option value="">Select your Ward (1 – 30)</option>
+                    {Array.from({ length: 30 }, (_, i) => (
+                      <option key={i + 1} value={`Ward ${i + 1}`}>
+                        Ward {i + 1}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Email Address */}
+              {/* Email */}
               <div>
                 <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
                   Email Address <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-[#e5c158]/60" />
+                  <Mail className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3.5" />
                   <input
                     type="email"
                     name="email"
@@ -367,80 +430,86 @@ export default function Registration({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* GPay Screenshot Upload Area */}
-              <div className="pt-2">
-                <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
-                  Upload GPay Screenshot <span className="text-red-400">*</span>
-                </label>
+              {/* Conditional GPay Screenshot Upload Area */}
+              {paymentMode === 'gpay' && (
+                <div className="pt-2">
+                  <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
+                    Upload GPay Screenshot <span className="text-red-400">*</span>
+                  </label>
 
-                <div className="relative border-2 border-dashed border-[#d4af37]/40 hover:border-[#d96b27] rounded-2xl p-4 text-center bg-[#1a0f0a] transition-all cursor-pointer group">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleScreenshotChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  />
-                  
-                  {screenshotPreview ? (
-                    <div className="flex flex-col sm:flex-row items-center gap-4 text-left p-2">
-                      <img
-                        src={screenshotPreview}
-                        alt="GPay Screenshot"
-                        className="w-20 h-20 object-cover rounded-xl border border-[#e5c158] shadow-md flex-shrink-0"
-                      />
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-white line-clamp-1">
-                          {screenshotFile?.name}
+                  <div className="relative border-2 border-dashed border-[#d4af37]/40 hover:border-[#d96b27] rounded-2xl p-4 text-center bg-[#1a0f0a] transition-all cursor-pointer group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleScreenshotChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    
+                    {screenshotPreview ? (
+                      <div className="flex flex-col sm:flex-row items-center gap-4 text-left p-2">
+                        <img
+                          src={screenshotPreview}
+                          alt="GPay Screenshot"
+                          className="w-20 h-20 object-cover rounded-xl border border-[#e5c158] shadow-md flex-shrink-0"
+                        />
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-white line-clamp-1">
+                            {screenshotFile?.name}
+                          </p>
+                          {isVerifying && (
+                            <div className="flex items-center gap-2 text-xs text-amber-400 animate-pulse font-medium">
+                              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                              Analyzing & Verifying GPay Screenshot...
+                            </div>
+                          )}
+                          {isVerified && (
+                            <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30">
+                              <CheckCircle className="w-4 h-4 text-green-400" />
+                              GPay Screenshot Verified! (Txn ID: {txnRef})
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 py-4">
+                        <div className="w-12 h-12 rounded-full bg-[#3d2417] text-[#e5c158] group-hover:bg-[#d96b27] group-hover:text-white flex items-center justify-center mx-auto transition-colors">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <p className="text-xs font-semibold text-white">
+                          Click or Drag & Drop GPay Payment Screenshot
                         </p>
-                        {isVerifying && (
-                          <div className="flex items-center gap-2 text-xs text-amber-400 animate-pulse font-medium">
-                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                            Analyzing & Verifying GPay Screenshot...
-                          </div>
-                        )}
-                        {isVerified && (
-                          <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30">
-                            <CheckCircle className="w-4 h-4 text-green-400" />
-                            GPay Screenshot Verified! (Txn ID: {txnRef})
-                          </div>
-                        )}
+                        <p className="text-[10px] text-gray-400">
+                          Supports PNG, JPG, JPEG (Max 10MB)
+                        </p>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 py-4">
-                      <div className="w-12 h-12 rounded-full bg-[#3d2417] text-[#e5c158] group-hover:bg-[#d96b27] group-hover:text-white flex items-center justify-center mx-auto transition-colors">
-                        <Upload className="w-6 h-6" />
-                      </div>
-                      <p className="text-xs font-semibold text-white">
-                        Click or Drag & Drop GPay Payment Screenshot
-                      </p>
-                      <p className="text-[10px] text-gray-400">
-                        Supports PNG, JPG, JPEG (Max 10MB)
-                      </p>
-                    </div>
+                    )}
+                  </div>
+
+                  {verificationError && (
+                    <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {verificationError}
+                    </p>
                   )}
                 </div>
-
-                {verificationError && (
-                  <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {verificationError}
-                  </p>
-                )}
-              </div>
+              )}
 
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={!isVerified}
+                disabled={paymentMode === 'gpay' && !isVerified}
                 className={`w-full py-4 rounded-2xl font-extrabold text-base transition-all duration-300 shadow-xl border flex items-center justify-center gap-2 ${
-                  isVerified
+                  paymentMode === 'cash' || isVerified
                     ? 'bg-orange-gradient text-white border-[#e5c158]/60 shadow-[#d96b27]/40 hover:scale-[1.01] active:scale-[0.99] cursor-pointer'
                     : 'bg-[#2a1a12] text-gray-500 border-[#382015] cursor-not-allowed opacity-70'
                 }`}
               >
                 <ShieldCheck className="w-5 h-5" />
-                {isVerified ? 'Confirm & Generate Delegate Ticket' : 'Upload GPay Screenshot to Register'}
+                {paymentMode === 'cash'
+                  ? 'Confirm Registration (Spot Cash)'
+                  : isVerified
+                  ? 'Confirm & Generate Delegate Ticket'
+                  : 'Upload GPay Screenshot to Register'}
               </button>
 
             </form>
@@ -472,7 +541,7 @@ export default function Registration({ isOpen, onClose }) {
                 onClick={() => setShowAdminModal(false)}
                 className="p-1 rounded-full hover:bg-black/20 text-white"
               >
-                <X className="w-6 h-6" />
+                ✕
               </button>
             </div>
 
@@ -490,9 +559,12 @@ export default function Registration({ isOpen, onClose }) {
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
                           {item.ticketId}
                         </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#d96b27]/20 text-[#ff9e58] border border-[#d96b27]/40">
+                          {item.paymentMode === 'cash' ? '💵 Spot Cash' : '💳 GPay'}
+                        </span>
                       </div>
                       <p className="text-xs text-[#f4ece1]/80 mt-1">
-                        Parish: <strong>{item.parish}</strong> • Phone: <strong>{item.phone}</strong> • Txn: <span className="font-mono text-amber-300">{item.txnRef}</span>
+                        Ward: <strong>{item.parish}</strong> • Phone: <strong>{item.phone}</strong> • Txn: <span className="font-mono text-amber-300">{item.txnRef}</span>
                       </p>
                       <p className="text-[10px] text-gray-500 mt-0.5">
                         Registered: {item.dateRegistered}
@@ -530,4 +602,3 @@ export default function Registration({ isOpen, onClose }) {
     </section>
   );
 }
-
