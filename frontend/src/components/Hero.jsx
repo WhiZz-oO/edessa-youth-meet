@@ -57,7 +57,7 @@ export default function Hero({ onOpenRegister }) {
         <h1 className="font-cinzel text-6xl sm:text-8xl md:text-9xl font-black tracking-widest leading-none text-gold-gradient drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)] mb-2">
           EDESSA
         </h1>
-
+          <br></br>
         {/* Called to Witness */}
         <div className="mb-4">
           <h2 className="font-script text-4xl sm:text-6xl md:text-7xl text-orange-gradient drop-shadow-md">
