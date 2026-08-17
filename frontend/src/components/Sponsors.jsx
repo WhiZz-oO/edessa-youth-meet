@@ -22,18 +22,15 @@ export default function Sponsors() {
           </p>
         </div>
 
-        {/* Title Sponsors */}
+        {/* Title Sponsors - Names Only */}
         {SPONSORS_DATA.titleSponsors && SPONSORS_DATA.titleSponsors.length > 0 && (
           <div className="mb-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {SPONSORS_DATA.titleSponsors.map((sponsor, idx) => (
                 <div
                   key={idx}
-                  className="bg-[#2a1a12] text-white p-8 sm:p-10 rounded-3xl border-2 border-[#d4af37]/40 shadow-xl flex flex-col items-center justify-center text-center hover:border-[#d96b27] transition-all group"
+                  className="bg-[#2a1a12] text-white p-8 sm:p-10 rounded-3xl border-2 border-[#d4af37]/40 shadow-xl flex items-center justify-center text-center hover:border-[#d96b27] transition-all group"
                 >
-                  <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-[#d96b27] mb-3">
-                    {sponsor.category || 'Official Sponsor'}
-                  </span>
                   <h3 className="font-cinzel text-2xl sm:text-3xl font-bold text-gold-gradient tracking-wide">
                     {sponsor.name}
                   </h3>
