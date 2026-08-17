@@ -660,12 +660,15 @@ export default function Registration({ isOpen, onClose }) {
                     required
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#1a0f0a] border border-[#d4af37]/30 text-white placeholder-gray-500 focus:outline-none focus:border-[#d96b27] text-sm cursor-pointer appearance-none"
                   >
-                    <option value="">Select your Ward (1 – 30)</option>
-                    {Array.from({ length: 30 }, (_, i) => (
-                      <option key={i + 1} value={`Ward ${i + 1}`}>
-                        Ward {i + 1}
-                      </option>
-                    ))}
+                    <option value="">Select your Ward (01 – 30)</option>
+                    {Array.from({ length: 30 }, (_, i) => {
+                      const wardNum = String(i + 1).padStart(2, '0');
+                      return (
+                        <option key={i + 1} value={`Ward ${wardNum}`}>
+                          Ward {wardNum}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
