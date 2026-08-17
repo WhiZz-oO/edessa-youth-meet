@@ -1,5 +1,5 @@
-﻿import React from "react";
-import { Mic, BookOpen, Sparkles, Cross } from "lucide-react";
+import React from "react";
+import { Mic, BookOpen, Sparkles } from "lucide-react";
 import { RESOURCE_PERSONS } from "../data/mockData";
 
 import frJoseph from "../assets/fr-joseph.jpg";
@@ -10,6 +10,13 @@ const LOCAL_PHOTOS = {
   1: frJoseph,
   2: edwinJosy,
   3: joseVince,
+};
+
+// Custom zoom/positioning so all three resource persons have matching head and portrait sizes
+const PHOTO_WRAPPERS = {
+  1: "w-full h-full",
+  2: "w-full h-full scale-[1.48] origin-[50%_22%]",
+  3: "w-full h-full",
 };
 
 export default function ResourcePersons() {
@@ -41,17 +48,20 @@ export default function ResourcePersons() {
               key={person.id}
               className="bg-wood-card rounded-3xl overflow-hidden border-2 border-[#d4af37]/30 shadow-xl hover:shadow-2xl hover:border-[#d96b27]/60 transition-all duration-300 group flex flex-col"
             >
-              {/* Photo */}
+              {/* Photo Container */}
               <div className="relative h-72 overflow-hidden bg-[#1a0f0a]">
-                <img
-                  src={LOCAL_PHOTOS[person.id]}
-                  alt={person.name}
-                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
-                  }}
-                />
+                <div className={PHOTO_WRAPPERS[person.id] || "w-full h-full"}>
+                  <img
+                    src={LOCAL_PHOTOS[person.id]}
+                    alt={person.name}
+                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      if (e.target.nextSibling) e.target.nextSibling.style.display = "flex";
+                    }}
+                  />
+                </div>
+
                 {/* Fallback avatar */}
                 <div
                   className="w-full h-full items-center justify-center bg-[#2a1a12]"
@@ -64,10 +74,10 @@ export default function ResourcePersons() {
                 </div>
 
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1d120c] via-[#1d120c]/20 to-transparent opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1d120c] via-[#1d120c]/20 to-transparent opacity-80 pointer-events-none" />
 
                 {/* Badge */}
-                <div className="absolute top-4 left-4">
+                <div className="absolute top-4 left-4 z-10">
                   <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-orange-gradient text-white shadow-lg border border-[#e5c158]/40 flex items-center gap-1.5">
                     <Sparkles className="w-3 h-3 text-[#ffe8aa]" />
                     {person.badge}

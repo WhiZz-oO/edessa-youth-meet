@@ -5,13 +5,13 @@ import { EVENT_DETAILS } from '../data/mockData';
 export default function About() {
   return (
     <section id="about" className="py-20 bg-cream-section relative overflow-hidden text-[#2a1a12]">
-      
+
       {/* Background Subtle Motifs */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-[#d96b27]/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4a2c1d]/10 text-[#d96b27] text-xs font-extrabold uppercase tracking-widest mb-3">
@@ -28,7 +28,7 @@ export default function About() {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center mb-16">
-          
+
           {/* Left Feature Card (Wood Textured Highlight Container) */}
           <div className="lg:col-span-7 bg-wood-card p-8 sm:p-10 rounded-3xl text-white shadow-2xl border-2 border-[#d4af37]/30 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-10 text-[#e5c158]">
@@ -39,7 +39,7 @@ export default function About() {
               <span className="inline-block px-3 py-1 rounded-lg bg-[#d96b27]/20 text-[#ff9e58] text-xs font-bold tracking-wider uppercase border border-[#d96b27]/40">
                 Youth Meet 2026
               </span>
-              
+
               <h3 className="font-cinzel text-2xl sm:text-3xl font-bold text-gold-gradient leading-tight">
                 A Sacred Gathering of Passion, Fellowship & Purpose
               </h3>
@@ -54,7 +54,7 @@ export default function About() {
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-lg font-bold text-white font-cinzel">500+</h4>
+                    <h4 className="text-lg font-bold text-white font-cinzel">100+</h4>
                     <p className="text-xs text-[#f4ece1]/70">Youth Delegates</p>
                   </div>
                 </div>
@@ -75,7 +75,7 @@ export default function About() {
 
           {/* Right Side: Mission & Vision Stack */}
           <div className="lg:col-span-5 space-y-6">
-            
+
             {/* Vision Card */}
             <div className="bg-white/80 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-[#4a2c1d]/15 shadow-xl hover:shadow-2xl transition-all group">
               <div className="w-12 h-12 rounded-2xl bg-[#d96b27]/10 text-[#d96b27] flex items-center justify-center mb-4 group-hover:bg-[#d96b27] group-hover:text-white transition-colors">
