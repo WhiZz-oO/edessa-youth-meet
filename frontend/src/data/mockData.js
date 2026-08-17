@@ -45,7 +45,7 @@ export const SCHEDULE_DATA = [
   {
     time: "1:00 PM – 1:45 PM",
     title: "Lunch Break",
-    description: "Grand traditional Kerala Sadhya for all participants and guests.",
+    description: "Mandhi for all participants and guests.",
     iconName: "Utensils",
   },
   {
