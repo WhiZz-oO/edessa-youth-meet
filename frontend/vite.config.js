@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/edessa-youth-meet/',
+  base: '/',
   plugins: [
     react(),
     tailwindcss()
