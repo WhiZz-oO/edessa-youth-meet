@@ -3,7 +3,7 @@ import {
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
   Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross,
   CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink,
-  Loader2, Database, Home, Image, Key, AlertTriangle
+  Loader2, Database, Home, Image, Key, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Tesseract from 'tesseract.js';
@@ -31,26 +31,51 @@ export default function Registration({ isOpen, onClose }) {
   const [isVerifying, setIsVerifying] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [isVerified, setIsVerified] = useState(false);
+  const [payeeVerified, setPayeeVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [duplicateError, setDuplicateError] = useState('');
   const [txnRef, setTxnRef] = useState('');
   const [generatedTicket, setGeneratedTicket] = useState(null);
 
-  // Mock local registration database
+  // Existing database Transaction IDs
+  const [usedTxnIds, setUsedTxnIds] = useState([]);
   const [registeredList, setRegisteredList] = useState([]);
   const [showAdminModal, setShowAdminModal] = useState(false);
 
   const upiPayUrl = `upi://pay?pa=${EVENT_DETAILS.gpayUpiId}&pn=Albin%20Mathews&am=150&cu=INR&tn=EDESSA%202026%20Registration`;
 
-  useEffect(() => {
+  // Fetch all existing transaction IDs from Google Sheet + LocalStorage on mount
+  const fetchExistingTransactions = async () => {
+    let localTxns = [];
     const saved = localStorage.getItem('edessa_registrations');
     if (saved) {
       try {
-        setRegisteredList(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setRegisteredList(parsed);
+        localTxns = parsed.map(item => String(item.txnRef || '').trim()).filter(Boolean);
       } catch (e) {
         console.error('Failed to parse registrations', e);
       }
     }
+
+    if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
+      try {
+        const res = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl);
+        const data = await res.json();
+        if (data && data.txns && Array.isArray(data.txns)) {
+          const combined = Array.from(new Set([...localTxns, ...data.txns.map(t => String(t).trim())]));
+          setUsedTxnIds(combined);
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not fetch remote txns:', err);
+      }
+    }
+    setUsedTxnIds(localTxns);
+  };
+
+  useEffect(() => {
+    fetchExistingTransactions();
   }, []);
 
   const handleChange = (e) => {
@@ -74,14 +99,14 @@ export default function Registration({ isOpen, onClose }) {
       setIsVerified(true);
       setTxnRef('CASH-DESK');
     } else {
-      if (!screenshotFile) {
+      if (!txnRef || txnRef === 'CASH-DESK') {
         setIsVerified(false);
         setTxnRef('');
       }
     }
   };
 
-  // Compress image before sending to avoid large payload
+  // Compress image
   const compressImage = (file, callback) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -113,6 +138,34 @@ export default function Registration({ isOpen, onClose }) {
     };
   };
 
+  // Validate Transaction ID for duplicates
+  const checkDuplicate = (idToCheck) => {
+    if (!idToCheck || idToCheck === 'SPOT-CASH' || idToCheck === 'CASH-DESK') return false;
+    const cleanId = String(idToCheck).trim();
+    return usedTxnIds.includes(cleanId);
+  };
+
+  const handleTxnChange = (value) => {
+    const cleanVal = value.trim();
+    setTxnRef(cleanVal);
+    setDuplicateError('');
+
+    if (!cleanVal) {
+      setIsVerified(false);
+      return;
+    }
+
+    if (checkDuplicate(cleanVal)) {
+      setDuplicateError(`❌ Duplicate Detected: Transaction ID (${cleanVal}) has already been registered in the system!`);
+      setIsVerified(false);
+      return;
+    }
+
+    if (payeeVerified && cleanVal.length >= 8) {
+      setIsVerified(true);
+    }
+  };
+
   const handleScreenshotChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -126,6 +179,8 @@ export default function Registration({ isOpen, onClose }) {
     setVerificationError('');
     setDuplicateError('');
     setIsVerified(false);
+    setPayeeVerified(false);
+    setTxnRef('');
     setOcrProgress(0);
 
     compressImage(file, (compressedBase64) => {
@@ -152,7 +207,7 @@ export default function Registration({ isOpen, onClose }) {
       setIsVerifying(false);
       const textLower = text.toLowerCase();
 
-      // Check 1: Recipient Verification (Albin Mathews or UPI handle)
+      // Check 1: Recipient Verification (Albin Mathews / UPI handle / phone)
       const hasPayeeMatch = 
         textLower.includes('albin') || 
         textLower.includes('mathews') || 
@@ -163,62 +218,67 @@ export default function Registration({ isOpen, onClose }) {
 
       if (!hasPayeeMatch) {
         setVerificationError(
-          'Screenshot rejected: Payment must be addressed to Albin Mathews (albinmathewsktu70@okaxis).'
+          'Screenshot Invalid: Payment recipient must be Albin Mathews (albinmathewsktu70@okaxis).'
         );
+        setPayeeVerified(false);
         setIsVerified(false);
         return;
       }
 
-      // Check 2: Extract 12-digit UPI Transaction ID
-      const digitMatch = text.match(/\b\d{12}\b/);
-      let detectedTxn = digitMatch ? digitMatch[0] : '';
+      setPayeeVerified(true);
 
-      // Check for Google Transaction ID if numeric UPI ID not found
-      if (!detectedTxn) {
+      // Check 2: Extract 12-digit UPI Transaction ID or Google Txn ID
+      let detectedTxn = '';
+      const digitMatch = text.match(/\b\d{12}\b/);
+      if (digitMatch) {
+        detectedTxn = digitMatch[0];
+      } else {
         const googleTxnMatch = text.match(/CICAg[a-zA-Z0-9_-]+/);
         if (googleTxnMatch) {
           detectedTxn = googleTxnMatch[0];
         }
       }
 
-      // Check 3: Client-side local duplicate check
       if (detectedTxn) {
-        const isLocalDuplicate = registeredList.some(
-          item => item.txnRef && item.txnRef !== 'SPOT-CASH' && item.txnRef === detectedTxn
-        );
+        setTxnRef(detectedTxn);
 
-        if (isLocalDuplicate) {
+        // Check 3: Immediate Duplicate Validation
+        if (checkDuplicate(detectedTxn)) {
           setDuplicateError(
-            `Duplicate Payment Detected: Transaction ID (${detectedTxn}) has already been used for registration.`
+            `Duplicate Payment Blocked: Transaction ID (${detectedTxn}) has already been used for registration!`
           );
           setIsVerified(false);
           return;
         }
 
-        setTxnRef(detectedTxn);
         setIsVerified(true);
       } else {
-        // Fallback: If OCR missed digits due to font/angle, generate ref but allow user confirmation
-        const fallbackTxn = 'UPI-' + Math.floor(100000000000 + Math.random() * 900000000000);
-        setTxnRef(fallbackTxn);
-        setIsVerified(true);
+        // If OCR could not read 12 digits automatically, prompt user to enter the exact 12 digits
+        setVerificationError(
+          'Could not auto-read 12-digit UPI ID from image. Please type the 12-digit Transaction ID shown on your screenshot below.'
+        );
+        setIsVerified(false);
       }
     } catch (err) {
       console.error('OCR Error:', err);
       setIsVerifying(false);
-      // Fallback
-      const fallbackTxn = 'UPI-' + Math.floor(100000000000 + Math.random() * 900000000000);
-      setTxnRef(fallbackTxn);
-      setIsVerified(true);
+      setVerificationError('Could not process image text. Please enter the 12-digit UPI Transaction ID below.');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (paymentMode === 'gpay' && !isVerified) {
-      setVerificationError('GPay payment screenshot verification is required before submission.');
-      return;
+    if (paymentMode === 'gpay') {
+      if (!txnRef || txnRef.length < 8) {
+        setVerificationError('Please provide a valid UPI Transaction ID (12 digits).');
+        return;
+      }
+
+      if (checkDuplicate(txnRef)) {
+        setDuplicateError(`Duplicate Payment Blocked: Transaction ID (${txnRef}) has already been used!`);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -248,7 +308,7 @@ export default function Registration({ isOpen, onClose }) {
       screenshotName: `${newTicketId}_${formData.fullName.replace(/\s+/g, '_')}.jpg`,
     };
 
-    // Send to Google Sheets if Web App URL is configured
+    // Send to Google Sheets
     if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
       try {
         const response = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
@@ -266,11 +326,14 @@ export default function Registration({ isOpen, onClose }) {
           return;
         }
       } catch (err) {
-        console.warn('Could not check remote duplicate via POST, proceeding with local save:', err);
+        console.warn('POST response warning:', err);
       }
     }
 
-    // Save locally
+    // Save locally and add to usedTxnIds
+    if (paymentMode === 'gpay') {
+      setUsedTxnIds(prev => [...prev, txnRef]);
+    }
     const updatedList = [newEntry, ...registeredList];
     setRegisteredList(updatedList);
     localStorage.setItem('edessa_registrations', JSON.stringify(updatedList));
@@ -292,6 +355,7 @@ export default function Registration({ isOpen, onClose }) {
     setScreenshotBase64('');
     if (paymentMode === 'gpay') {
       setIsVerified(false);
+      setPayeeVerified(false);
       setTxnRef('');
     }
   };
@@ -299,6 +363,7 @@ export default function Registration({ isOpen, onClose }) {
   const handleClearDatabase = () => {
     if (window.confirm('Are you sure you want to clear all mock registrations?')) {
       setRegisteredList([]);
+      setUsedTxnIds([]);
       localStorage.removeItem('edessa_registrations');
     }
   };
@@ -440,7 +505,7 @@ export default function Registration({ isOpen, onClose }) {
 
                 {/* Verification Note */}
                 <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70 space-y-1">
-                  <p>🔒 <strong>Anti-Fraud Protection:</strong> Screenshots are scanned via AI OCR to verify payment to <strong>albinmathewsktu70@okaxis</strong> and prevent duplicate transaction re-use.</p>
+                  <p>🔒 <strong>Anti-Fraud Shield Active:</strong> Each 12-digit UPI Transaction ID is verified and can only be used once.</p>
                 </div>
               </>
             ) : (
@@ -520,12 +585,12 @@ export default function Registration({ isOpen, onClose }) {
 
             {/* Duplicate Error Banner */}
             {duplicateError && (
-              <div className="mb-6 p-4 rounded-2xl bg-red-500/15 border-2 border-red-500/40 text-red-300 text-xs flex items-start gap-3">
+              <div className="mb-6 p-4 rounded-2xl bg-red-500/20 border-2 border-red-500 text-red-200 text-xs flex items-start gap-3 shadow-lg animate-bounce">
                 <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold text-red-400 text-sm">Duplicate Payment Detected</p>
-                  <p className="mt-1 leading-relaxed">{duplicateError}</p>
-                  <p className="text-[11px] text-red-300/80 mt-1">Please provide a unique, valid payment transaction screenshot.</p>
+                  <p className="font-bold text-red-400 text-sm">❌ Duplicate Payment Rejected</p>
+                  <p className="mt-1 font-semibold leading-relaxed">{duplicateError}</p>
+                  <p className="text-[11px] text-red-300/90 mt-1">This transaction ID has already been recorded for a previous registration. Each payment screenshot can only be used once.</p>
                 </div>
               </div>
             )}
@@ -694,15 +759,10 @@ export default function Registration({ isOpen, onClose }) {
                             </div>
                           )}
 
-                          {isVerified && !verificationError && (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30">
-                                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                                <span>Payment to Albin Mathews Verified!</span>
-                              </div>
-                              <p className="text-[11px] text-[#e5c158] font-mono">
-                                UPI Txn ID: <strong>{txnRef}</strong>
-                              </p>
+                          {payeeVerified && (
+                            <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30">
+                              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                              <span>Paid to Albin Mathews Verified!</span>
                             </div>
                           )}
                         </div>
@@ -716,17 +776,17 @@ export default function Registration({ isOpen, onClose }) {
                           Click or Drag & Drop GPay Payment Screenshot
                         </p>
                         <p className="text-[10px] text-gray-400">
-                          AI will verify payment to <strong>albinmathewsktu70@okaxis</strong> and detect UPI Txn ID
+                          AI will verify payment to <strong>albinmathewsktu70@okaxis</strong> and detect 12-digit UPI Txn ID
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {/* Editable / Confirmed UPI Txn Ref */}
-                  {isVerified && !verificationError && (
-                    <div>
-                      <label className="block text-[11px] font-bold uppercase text-[#e5c158] mb-1">
-                        Verified 12-Digit UPI Transaction ID
+                  {/* Explicit 12-Digit UPI Transaction ID Input */}
+                  {(screenshotPreview || txnRef) && (
+                    <div className="p-3.5 rounded-2xl bg-[#1a0f0a] border border-[#d4af37]/30 space-y-1.5">
+                      <label className="block text-[11px] font-bold uppercase text-[#e5c158]">
+                        12-Digit UPI Transaction ID (from GPay screenshot) <span className="text-red-400">*</span>
                       </label>
                       <div className="relative">
                         <Key className="w-3.5 h-3.5 text-[#e5c158] absolute left-3 top-3" />
@@ -734,11 +794,14 @@ export default function Registration({ isOpen, onClose }) {
                           type="text"
                           required
                           value={txnRef}
-                          onChange={(e) => setTxnRef(e.target.value.trim())}
+                          onChange={(e) => handleTxnChange(e.target.value)}
                           placeholder="e.g. 622275642244"
-                          className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#1a0f0a] border border-green-500/40 text-green-400 font-mono text-xs focus:outline-none focus:border-[#d96b27]"
+                          className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#2a1a12] border border-[#d4af37]/40 text-white font-mono text-xs focus:outline-none focus:border-[#d96b27]"
                         />
                       </div>
+                      <p className="text-[10px] text-[#f4ece1]/60">
+                        Verify this matches the 12-digit number (e.g. 622275642244) on your Google Pay screen.
+                      </p>
                     </div>
                   )}
 
@@ -754,9 +817,9 @@ export default function Registration({ isOpen, onClose }) {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || (paymentMode === 'gpay' && !isVerified)}
+                disabled={isSubmitting || !!duplicateError || (paymentMode === 'gpay' && (!isVerified || !txnRef))}
                 className={`w-full py-4 rounded-2xl font-extrabold text-base transition-all duration-300 shadow-xl border flex items-center justify-center gap-2 ${
-                  paymentMode === 'cash' || isVerified
+                  !duplicateError && (paymentMode === 'cash' || (isVerified && txnRef))
                     ? 'bg-orange-gradient text-white border-[#e5c158]/60 shadow-[#d96b27]/40 hover:scale-[1.01] active:scale-[0.99] cursor-pointer'
                     : 'bg-[#2a1a12] text-gray-500 border-[#382015] cursor-not-allowed opacity-70'
                 }`}
@@ -770,9 +833,11 @@ export default function Registration({ isOpen, onClose }) {
                   <>
                     <ShieldCheck className="w-5 h-5" />
                     <span>
-                      {paymentMode === 'cash'
+                      {duplicateError
+                        ? 'Duplicate Payment - Cannot Submit'
+                        : paymentMode === 'cash'
                         ? 'Confirm Registration (Spot Cash)'
-                        : isVerified
+                        : isVerified && txnRef
                         ? 'Confirm & Generate Delegate Ticket'
                         : 'Upload Valid GPay Screenshot to Register'}
                     </span>
