@@ -29,15 +29,12 @@ export default function Sponsors() {
               {SPONSORS_DATA.titleSponsors.map((sponsor, idx) => (
                 <div
                   key={idx}
-                  className="bg-[#2a1a12] text-white p-8 rounded-3xl border-2 border-[#d4af37]/40 shadow-xl flex flex-col items-center justify-center text-center hover:border-[#d96b27] transition-all group"
+                  className="bg-[#2a1a12] text-white p-8 sm:p-10 rounded-3xl border-2 border-[#d4af37]/40 shadow-xl flex flex-col items-center justify-center text-center hover:border-[#d96b27] transition-all group"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-[#3d2417] text-[#e5c158] flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform shadow-md">
-                    ✝
-                  </div>
-                  <span className="text-xs font-extrabold uppercase tracking-widest text-[#d96b27] mb-2">
+                  <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-[#d96b27] mb-3">
                     {sponsor.category || 'Official Sponsor'}
                   </span>
-                  <h3 className="font-cinzel text-2xl font-bold text-gold-gradient">
+                  <h3 className="font-cinzel text-2xl sm:text-3xl font-bold text-gold-gradient tracking-wide">
                     {sponsor.name}
                   </h3>
                 </div>
