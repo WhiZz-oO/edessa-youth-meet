@@ -2,16 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
   Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross,
-  CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink
+  CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink,
+  Loader2, Database
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { EVENT_DETAILS } from '../data/mockData';
+import { GOOGLE_SHEETS_CONFIG } from '../data/googleSheetsConfig';
 import TicketModal from './TicketModal';
 import gpayQr from '../assets/gpay-qr.png';
 
 export default function Registration({ isOpen, onClose }) {
   const [paymentMode, setPaymentMode] = useState('gpay'); // 'gpay' or 'cash'
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -105,7 +108,7 @@ export default function Registration({ isOpen, onClose }) {
     }, 1200);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (paymentMode === 'gpay' && !isVerified) {
@@ -113,28 +116,51 @@ export default function Registration({ isOpen, onClose }) {
       return;
     }
 
+    setIsSubmitting(true);
+
     const newTicketId = 'EDESSA-2026-' + Math.floor(1000 + Math.random() * 9000);
+    const dateFormatted = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
     const newEntry = {
       ticketId: newTicketId,
       fullName: formData.fullName,
       phone: formData.phone,
-      parish: formData.parish,
+      parish: formData.parish, // Ward
       age: formData.age,
       email: formData.email,
-      paymentMode: paymentMode, // 'gpay' or 'cash'
+      paymentMode: paymentMode === 'cash' ? 'Spot Cash' : 'Google Pay (UPI)',
       txnRef: paymentMode === 'cash' ? 'SPOT-CASH' : txnRef,
-      dateRegistered: new Date().toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      dateRegistered: dateFormatted,
     };
 
+    // Save locally
     const updatedList = [newEntry, ...registeredList];
     setRegisteredList(updatedList);
     localStorage.setItem('edessa_registrations', JSON.stringify(updatedList));
+
+    // Send to Google Sheets if Web App URL is configured
+    if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
+      try {
+        await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newEntry),
+        });
+      } catch (err) {
+        console.warn('Could not post to Google Sheets endpoint, saved locally:', err);
+      }
+    }
+
+    setIsSubmitting(false);
 
     confetti({
       particleCount: 100,
@@ -344,15 +370,26 @@ export default function Registration({ isOpen, onClose }) {
               </>
             )}
 
-            {/* View Stored Local DB link */}
-            <div className="pt-2 text-center">
+            {/* View Stored Local DB link & Live Sheet Link */}
+            <div className="pt-2 flex flex-col items-center gap-1.5 text-center">
               <button
                 type="button"
                 onClick={() => setShowAdminModal(true)}
                 className="text-xs text-[#e5c158]/70 hover:text-[#e5c158] underline font-garamond"
               >
-                View Saved Registrations ({registeredList.length})
+                View Local Registrations ({registeredList.length})
               </button>
+
+              <a
+                href={GOOGLE_SHEETS_CONFIG.sheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] text-[#ff9e58] hover:underline"
+              >
+                <Database className="w-3 h-3" />
+                <span>Open Google Sheet Database</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
 
           </div>
@@ -534,19 +571,30 @@ export default function Registration({ isOpen, onClose }) {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={paymentMode === 'gpay' && !isVerified}
+                disabled={isSubmitting || (paymentMode === 'gpay' && !isVerified)}
                 className={`w-full py-4 rounded-2xl font-extrabold text-base transition-all duration-300 shadow-xl border flex items-center justify-center gap-2 ${
                   paymentMode === 'cash' || isVerified
                     ? 'bg-orange-gradient text-white border-[#e5c158]/60 shadow-[#d96b27]/40 hover:scale-[1.01] active:scale-[0.99] cursor-pointer'
                     : 'bg-[#2a1a12] text-gray-500 border-[#382015] cursor-not-allowed opacity-70'
                 }`}
               >
-                <ShieldCheck className="w-5 h-5" />
-                {paymentMode === 'cash'
-                  ? 'Confirm Registration (Spot Cash)'
-                  : isVerified
-                  ? 'Confirm & Generate Delegate Ticket'
-                  : 'Upload GPay Screenshot to Register'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Submitting Registration...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-5 h-5" />
+                    <span>
+                      {paymentMode === 'cash'
+                        ? 'Confirm Registration (Spot Cash)'
+                        : isVerified
+                        ? 'Confirm & Generate Delegate Ticket'
+                        : 'Upload GPay Screenshot to Register'}
+                    </span>
+                  </>
+                )}
               </button>
 
             </form>
@@ -572,7 +620,7 @@ export default function Registration({ isOpen, onClose }) {
             
             <div className="flex items-center justify-between border-b border-[#382015] pb-4 mb-4">
               <h3 className="font-cinzel text-xl font-bold text-gold-gradient">
-                Saved Registrations (Mock Local Database)
+                Saved Registrations (Local Database)
               </h3>
               <button
                 onClick={() => setShowAdminModal(false)}
@@ -585,7 +633,7 @@ export default function Registration({ isOpen, onClose }) {
             <div className="overflow-y-auto flex-grow space-y-3 pr-2">
               {registeredList.length === 0 ? (
                 <p className="text-xs text-center text-gray-400 py-8">
-                  No registrations recorded yet. Submit the form above to add demo delegates!
+                  No registrations recorded yet. Submit the form above to add delegates!
                 </p>
               ) : (
                 registeredList.map((item, idx) => (
@@ -597,7 +645,7 @@ export default function Registration({ isOpen, onClose }) {
                           {item.ticketId}
                         </span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#d96b27]/20 text-[#ff9e58] border border-[#d96b27]/40">
-                          {item.paymentMode === 'cash' ? '💵 Spot Cash' : '💳 GPay'}
+                          {item.paymentMode === 'Spot Cash' ? '💵 Spot Cash' : '💳 GPay'}
                         </span>
                       </div>
                       <p className="text-xs text-[#f4ece1]/80 mt-1">
@@ -627,7 +675,7 @@ export default function Registration({ isOpen, onClose }) {
                   className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold border border-red-500/30 transition-colors flex items-center gap-1"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Clear Mock DB
+                  Clear Local DB
                 </button>
               )}
             </div>
