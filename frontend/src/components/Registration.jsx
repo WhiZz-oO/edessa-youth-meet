@@ -3,7 +3,7 @@ import {
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
   Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross,
   CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink,
-  Loader2, Database, Home
+  Loader2, Database, Home, Image
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { EVENT_DETAILS } from '../data/mockData';
@@ -26,6 +26,7 @@ export default function Registration({ isOpen, onClose }) {
 
   const [screenshotFile, setScreenshotFile] = useState(null);
   const [screenshotPreview, setScreenshotPreview] = useState(null);
+  const [screenshotBase64, setScreenshotBase64] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
@@ -76,6 +77,38 @@ export default function Registration({ isOpen, onClose }) {
     }
   };
 
+  // Compress image before sending to avoid large payload over fetch
+  const compressImage = (file, callback) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = document.createElement('img');
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedData = canvas.toDataURL('image/jpeg', 0.8);
+        callback(compressedData);
+      };
+    };
+  };
+
   const handleScreenshotChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -89,12 +122,11 @@ export default function Registration({ isOpen, onClose }) {
     setVerificationError('');
     setIsVerified(false);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setScreenshotPreview(reader.result);
+    compressImage(file, (compressedBase64) => {
+      setScreenshotPreview(compressedBase64);
+      setScreenshotBase64(compressedBase64);
       simulateScreenshotVerification();
-    };
-    reader.readAsDataURL(file);
+    });
   };
 
   const simulateScreenshotVerification = () => {
@@ -106,7 +138,7 @@ export default function Registration({ isOpen, onClose }) {
       const randomTxn = 'GPAY-' + Math.floor(100000000000 + Math.random() * 900000000000);
       setTxnRef(randomTxn);
       setIsVerified(true);
-    }, 1200);
+    }, 1000);
   };
 
   const handleSubmit = async (e) => {
@@ -139,6 +171,8 @@ export default function Registration({ isOpen, onClose }) {
       paymentMode: paymentMode === 'cash' ? 'Spot Cash' : 'Google Pay (UPI)',
       txnRef: paymentMode === 'cash' ? 'SPOT-CASH' : txnRef,
       dateRegistered: dateFormatted,
+      screenshotData: paymentMode === 'gpay' ? screenshotBase64 : '',
+      screenshotName: `${newTicketId}_${formData.fullName.replace(/\s+/g, '_')}.jpg`,
     };
 
     // Save locally
@@ -176,6 +210,7 @@ export default function Registration({ isOpen, onClose }) {
     setFormData({ fullName: '', houseName: '', phone: '', parish: '', age: '', email: '' });
     setScreenshotFile(null);
     setScreenshotPreview(null);
+    setScreenshotBase64('');
     if (paymentMode === 'gpay') {
       setIsVerified(false);
       setTxnRef('');
@@ -603,7 +638,7 @@ export default function Registration({ isOpen, onClose }) {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Submitting Registration...</span>
+                    <span>Submitting Registration & Uploading Screenshot...</span>
                   </>
                 ) : (
                   <>
