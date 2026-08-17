@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
-  Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross,
+  Sparkles, User, Phone, MapPin, Mail, Calendar, Cross,
   CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink,
-  Loader2, Database, Home, Image, Key, AlertTriangle, RefreshCw
+  Loader2, Home, Image, Key, AlertTriangle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Tesseract from 'tesseract.js';
@@ -37,10 +37,8 @@ export default function Registration({ isOpen, onClose }) {
   const [txnRef, setTxnRef] = useState('');
   const [generatedTicket, setGeneratedTicket] = useState(null);
 
-  // Existing database Transaction IDs
+  // Existing database Transaction IDs for duplicate protection
   const [usedTxnIds, setUsedTxnIds] = useState([]);
-  const [registeredList, setRegisteredList] = useState([]);
-  const [showAdminModal, setShowAdminModal] = useState(false);
 
   const upiPayUrl = `upi://pay?pa=${EVENT_DETAILS.gpayUpiId}&pn=Albin%20Mathews&am=150&cu=INR&tn=EDESSA%202026%20Registration`;
 
@@ -51,7 +49,6 @@ export default function Registration({ isOpen, onClose }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setRegisteredList(parsed);
         localTxns = parsed.map(item => String(item.txnRef || '').trim()).filter(Boolean);
       } catch (e) {
         console.error('Failed to parse registrations', e);
@@ -334,9 +331,14 @@ export default function Registration({ isOpen, onClose }) {
     if (paymentMode === 'gpay') {
       setUsedTxnIds(prev => [...prev, txnRef]);
     }
-    const updatedList = [newEntry, ...registeredList];
-    setRegisteredList(updatedList);
-    localStorage.setItem('edessa_registrations', JSON.stringify(updatedList));
+    const saved = localStorage.getItem('edessa_registrations');
+    let currentList = [];
+    if (saved) {
+      try {
+        currentList = JSON.parse(saved);
+      } catch (e) {}
+    }
+    localStorage.setItem('edessa_registrations', JSON.stringify([newEntry, ...currentList]));
 
     setIsSubmitting(false);
 
@@ -357,14 +359,6 @@ export default function Registration({ isOpen, onClose }) {
       setIsVerified(false);
       setPayeeVerified(false);
       setTxnRef('');
-    }
-  };
-
-  const handleClearDatabase = () => {
-    if (window.confirm('Are you sure you want to clear all mock registrations?')) {
-      setRegisteredList([]);
-      setUsedTxnIds([]);
-      localStorage.removeItem('edessa_registrations');
     }
   };
 
@@ -550,8 +544,6 @@ export default function Registration({ isOpen, onClose }) {
                 </div>
               </>
             )}
-
-            
 
           </div>
 
@@ -839,80 +831,6 @@ export default function Registration({ isOpen, onClose }) {
           ticketData={generatedTicket}
           onClose={() => setGeneratedTicket(null)}
         />
-      )}
-
-      {/* Admin Registered List Modal */}
-      {showAdminModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative max-w-3xl w-full bg-wood-card rounded-3xl border-2 border-[#d4af37] shadow-2xl p-6 text-white max-h-[85vh] flex flex-col">
-            
-            <div className="flex items-center justify-between border-b border-[#382015] pb-4 mb-4">
-              <h3 className="font-cinzel text-xl font-bold text-gold-gradient">
-                Saved Registrations (Local Database)
-              </h3>
-              <button
-                onClick={() => setShowAdminModal(false)}
-                className="p-1 rounded-full hover:bg-black/20 text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="overflow-y-auto flex-grow space-y-3 pr-2">
-              {registeredList.length === 0 ? (
-                <p className="text-xs text-center text-gray-400 py-8">
-                  No registrations recorded yet. Submit the form above to add delegates!
-                </p>
-              ) : (
-                registeredList.map((item, idx) => (
-                  <div key={idx} className="bg-[#1a0f0a] p-4 rounded-xl border border-[#d4af37]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-sm">{item.fullName}</span>
-                        {item.houseName && (
-                          <span className="text-xs text-[#e5c158]">({item.houseName})</span>
-                        )}
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
-                          {item.ticketId}
-                        </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#d96b27]/20 text-[#ff9e58] border border-[#d96b27]/40">
-                          {item.paymentMode === 'Spot Cash' ? '💵 Spot Cash' : '💳 GPay'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#f4ece1]/80 mt-1">
-                        Ward: <strong>{item.parish}</strong> • Phone: <strong>{item.phone}</strong> • Txn: <span className="font-mono text-amber-300">{item.txnRef}</span>
-                      </p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">
-                        Registered: {item.dateRegistered}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => setGeneratedTicket(item)}
-                      className="px-3 py-1.5 rounded-lg bg-[#d96b27] text-white text-xs font-bold hover:bg-[#b84c0c] transition-colors"
-                    >
-                      View Ticket
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-[#382015] flex items-center justify-between">
-              <span className="text-xs text-gray-400">Total Delegates: {registeredList.length}</span>
-              {registeredList.length > 0 && (
-                <button
-                  onClick={handleClearDatabase}
-                  className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold border border-red-500/30 transition-colors flex items-center gap-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Clear Local DB
-                </button>
-              )}
-            </div>
-
-          </div>
-        </div>
       )}
 
     </section>
