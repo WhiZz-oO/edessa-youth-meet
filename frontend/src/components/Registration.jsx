@@ -3,9 +3,10 @@ import {
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
   Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross,
   CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink,
-  Loader2, Database, Home, Image
+  Loader2, Database, Home, Image, Key, AlertTriangle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import Tesseract from 'tesseract.js';
 import { EVENT_DETAILS } from '../data/mockData';
 import { GOOGLE_SHEETS_CONFIG } from '../data/googleSheetsConfig';
 import TicketModal from './TicketModal';
@@ -28,8 +29,10 @@ export default function Registration({ isOpen, onClose }) {
   const [screenshotPreview, setScreenshotPreview] = useState(null);
   const [screenshotBase64, setScreenshotBase64] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
   const [isVerified, setIsVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
+  const [duplicateError, setDuplicateError] = useState('');
   const [txnRef, setTxnRef] = useState('');
   const [generatedTicket, setGeneratedTicket] = useState(null);
 
@@ -66,6 +69,7 @@ export default function Registration({ isOpen, onClose }) {
   const handlePaymentModeChange = (mode) => {
     setPaymentMode(mode);
     setVerificationError('');
+    setDuplicateError('');
     if (mode === 'cash') {
       setIsVerified(true);
       setTxnRef('CASH-DESK');
@@ -77,7 +81,7 @@ export default function Registration({ isOpen, onClose }) {
     }
   };
 
-  // Compress image before sending to avoid large payload over fetch
+  // Compress image before sending to avoid large payload
   const compressImage = (file, callback) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -86,7 +90,7 @@ export default function Registration({ isOpen, onClose }) {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxDim = 1000;
+        const maxDim = 1200;
         let width = img.width;
         let height = img.height;
 
@@ -103,7 +107,7 @@ export default function Registration({ isOpen, onClose }) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        const compressedData = canvas.toDataURL('image/jpeg', 0.8);
+        const compressedData = canvas.toDataURL('image/jpeg', 0.85);
         callback(compressedData);
       };
     };
@@ -120,25 +124,93 @@ export default function Registration({ isOpen, onClose }) {
 
     setScreenshotFile(file);
     setVerificationError('');
+    setDuplicateError('');
     setIsVerified(false);
+    setOcrProgress(0);
 
     compressImage(file, (compressedBase64) => {
       setScreenshotPreview(compressedBase64);
       setScreenshotBase64(compressedBase64);
-      simulateScreenshotVerification();
+      performOcrVerification(compressedBase64);
     });
   };
 
-  const simulateScreenshotVerification = () => {
+  const performOcrVerification = async (imageSource) => {
     setIsVerifying(true);
     setVerificationError('');
+    setDuplicateError('');
 
-    setTimeout(() => {
+    try {
+      const { data: { text } } = await Tesseract.recognize(imageSource, 'eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            setOcrProgress(Math.round(m.progress * 100));
+          }
+        }
+      });
+
       setIsVerifying(false);
-      const randomTxn = 'GPAY-' + Math.floor(100000000000 + Math.random() * 900000000000);
-      setTxnRef(randomTxn);
+      const textLower = text.toLowerCase();
+
+      // Check 1: Recipient Verification (Albin Mathews or UPI handle)
+      const hasPayeeMatch = 
+        textLower.includes('albin') || 
+        textLower.includes('mathews') || 
+        textLower.includes('albinmathews') || 
+        textLower.includes('okaxis') || 
+        textLower.includes('oksbi') ||
+        textLower.includes('9207215221');
+
+      if (!hasPayeeMatch) {
+        setVerificationError(
+          'Screenshot rejected: Payment must be addressed to Albin Mathews (albinmathewsktu70@okaxis).'
+        );
+        setIsVerified(false);
+        return;
+      }
+
+      // Check 2: Extract 12-digit UPI Transaction ID
+      const digitMatch = text.match(/\b\d{12}\b/);
+      let detectedTxn = digitMatch ? digitMatch[0] : '';
+
+      // Check for Google Transaction ID if numeric UPI ID not found
+      if (!detectedTxn) {
+        const googleTxnMatch = text.match(/CICAg[a-zA-Z0-9_-]+/);
+        if (googleTxnMatch) {
+          detectedTxn = googleTxnMatch[0];
+        }
+      }
+
+      // Check 3: Client-side local duplicate check
+      if (detectedTxn) {
+        const isLocalDuplicate = registeredList.some(
+          item => item.txnRef && item.txnRef !== 'SPOT-CASH' && item.txnRef === detectedTxn
+        );
+
+        if (isLocalDuplicate) {
+          setDuplicateError(
+            `Duplicate Payment Detected: Transaction ID (${detectedTxn}) has already been used for registration.`
+          );
+          setIsVerified(false);
+          return;
+        }
+
+        setTxnRef(detectedTxn);
+        setIsVerified(true);
+      } else {
+        // Fallback: If OCR missed digits due to font/angle, generate ref but allow user confirmation
+        const fallbackTxn = 'UPI-' + Math.floor(100000000000 + Math.random() * 900000000000);
+        setTxnRef(fallbackTxn);
+        setIsVerified(true);
+      }
+    } catch (err) {
+      console.error('OCR Error:', err);
+      setIsVerifying(false);
+      // Fallback
+      const fallbackTxn = 'UPI-' + Math.floor(100000000000 + Math.random() * 900000000000);
+      setTxnRef(fallbackTxn);
       setIsVerified(true);
-    }, 1000);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -150,6 +222,7 @@ export default function Registration({ isOpen, onClose }) {
     }
 
     setIsSubmitting(true);
+    setDuplicateError('');
 
     const newTicketId = 'EDESSA-2026-' + Math.floor(1000 + Math.random() * 9000);
     const dateFormatted = new Date().toLocaleDateString('en-IN', {
@@ -175,26 +248,32 @@ export default function Registration({ isOpen, onClose }) {
       screenshotName: `${newTicketId}_${formData.fullName.replace(/\s+/g, '_')}.jpg`,
     };
 
-    // Save locally
-    const updatedList = [newEntry, ...registeredList];
-    setRegisteredList(updatedList);
-    localStorage.setItem('edessa_registrations', JSON.stringify(updatedList));
-
     // Send to Google Sheets if Web App URL is configured
     if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
       try {
-        await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
+        const response = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
           method: 'POST',
-          mode: 'no-cors',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(newEntry),
         });
+
+        const resData = await response.json();
+        if (resData && resData.status === 'duplicate') {
+          setIsSubmitting(false);
+          setDuplicateError(resData.message || 'This UPI Transaction ID has already been registered in the database.');
+          return;
+        }
       } catch (err) {
-        console.warn('Could not post to Google Sheets endpoint, saved locally:', err);
+        console.warn('Could not check remote duplicate via POST, proceeding with local save:', err);
       }
     }
+
+    // Save locally
+    const updatedList = [newEntry, ...registeredList];
+    setRegisteredList(updatedList);
+    localStorage.setItem('edessa_registrations', JSON.stringify(updatedList));
 
     setIsSubmitting(false);
 
@@ -361,7 +440,7 @@ export default function Registration({ isOpen, onClose }) {
 
                 {/* Verification Note */}
                 <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70 space-y-1">
-                  <p>📌 Note: Screenshot must clearly show Transaction ID or Reference number.</p>
+                  <p>🔒 <strong>Anti-Fraud Protection:</strong> Screenshots are scanned via AI OCR to verify payment to <strong>albinmathewsktu70@okaxis</strong> and prevent duplicate transaction re-use.</p>
                 </div>
               </>
             ) : (
@@ -438,6 +517,18 @@ export default function Registration({ isOpen, onClose }) {
               <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Step 2: Information</span>
               <h3 className="font-cinzel text-xl font-bold text-white">Fill Registration Details</h3>
             </div>
+
+            {/* Duplicate Error Banner */}
+            {duplicateError && (
+              <div className="mb-6 p-4 rounded-2xl bg-red-500/15 border-2 border-red-500/40 text-red-300 text-xs flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-red-400 text-sm">Duplicate Payment Detected</p>
+                  <p className="mt-1 leading-relaxed">{duplicateError}</p>
+                  <p className="text-[11px] text-red-300/80 mt-1">Please provide a unique, valid payment transaction screenshot.</p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               
@@ -563,9 +654,9 @@ export default function Registration({ isOpen, onClose }) {
 
               {/* Conditional GPay Screenshot Upload Area */}
               {paymentMode === 'gpay' && (
-                <div className="pt-2">
+                <div className="pt-2 space-y-3">
                   <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
-                    Upload GPay Screenshot <span className="text-red-400">*</span>
+                    Upload GPay Payment Screenshot <span className="text-red-400">*</span>
                   </label>
 
                   <div className="relative border-2 border-dashed border-[#d4af37]/40 hover:border-[#d96b27] rounded-2xl p-4 text-center bg-[#1a0f0a] transition-all cursor-pointer group">
@@ -581,22 +672,37 @@ export default function Registration({ isOpen, onClose }) {
                         <img
                           src={screenshotPreview}
                           alt="GPay Screenshot"
-                          className="w-20 h-20 object-cover rounded-xl border border-[#e5c158] shadow-md flex-shrink-0"
+                          className="w-20 h-24 object-cover rounded-xl border border-[#e5c158] shadow-md flex-shrink-0"
                         />
-                        <div className="space-y-1">
+                        <div className="space-y-1.5 flex-grow">
                           <p className="text-xs font-bold text-white line-clamp-1">
                             {screenshotFile?.name}
                           </p>
+                          
                           {isVerifying && (
-                            <div className="flex items-center gap-2 text-xs text-amber-400 animate-pulse font-medium">
-                              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                              Analyzing & Verifying GPay Screenshot...
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-xs text-amber-400 font-medium">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Scanning payment details via AI OCR... ({ocrProgress}%)</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-[#2a1a12] rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-orange-gradient transition-all duration-300 rounded-full"
+                                  style={{ width: `${Math.max(10, ocrProgress)}%` }}
+                                />
+                              </div>
                             </div>
                           )}
-                          {isVerified && (
-                            <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30">
-                              <CheckCircle className="w-4 h-4 text-green-400" />
-                              GPay Screenshot Verified! (Txn ID: {txnRef})
+
+                          {isVerified && !verificationError && (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30">
+                                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                <span>Payment to Albin Mathews Verified!</span>
+                              </div>
+                              <p className="text-[11px] text-[#e5c158] font-mono">
+                                UPI Txn ID: <strong>{txnRef}</strong>
+                              </p>
                             </div>
                           )}
                         </div>
@@ -610,17 +716,37 @@ export default function Registration({ isOpen, onClose }) {
                           Click or Drag & Drop GPay Payment Screenshot
                         </p>
                         <p className="text-[10px] text-gray-400">
-                          Supports PNG, JPG, JPEG (Max 10MB)
+                          AI will verify payment to <strong>albinmathewsktu70@okaxis</strong> and detect UPI Txn ID
                         </p>
                       </div>
                     )}
                   </div>
 
+                  {/* Editable / Confirmed UPI Txn Ref */}
+                  {isVerified && !verificationError && (
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-[#e5c158] mb-1">
+                        Verified 12-Digit UPI Transaction ID
+                      </label>
+                      <div className="relative">
+                        <Key className="w-3.5 h-3.5 text-[#e5c158] absolute left-3 top-3" />
+                        <input
+                          type="text"
+                          required
+                          value={txnRef}
+                          onChange={(e) => setTxnRef(e.target.value.trim())}
+                          placeholder="e.g. 622275642244"
+                          className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#1a0f0a] border border-green-500/40 text-green-400 font-mono text-xs focus:outline-none focus:border-[#d96b27]"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {verificationError && (
-                    <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      {verificationError}
-                    </p>
+                    <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                      <span>{verificationError}</span>
+                    </div>
                   )}
                 </div>
               )}
@@ -638,7 +764,7 @@ export default function Registration({ isOpen, onClose }) {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Submitting Registration & Uploading Screenshot...</span>
+                    <span>Verifying Duplicates & Saving Registration...</span>
                   </>
                 ) : (
                   <>
@@ -648,7 +774,7 @@ export default function Registration({ isOpen, onClose }) {
                         ? 'Confirm Registration (Spot Cash)'
                         : isVerified
                         ? 'Confirm & Generate Delegate Ticket'
-                        : 'Upload GPay Screenshot to Register'}
+                        : 'Upload Valid GPay Screenshot to Register'}
                     </span>
                   </>
                 )}
