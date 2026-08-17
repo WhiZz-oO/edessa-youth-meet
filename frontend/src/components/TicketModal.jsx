@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, CheckCircle, Printer, Cross, Sparkles, MapPin, Calendar, Banknote, CreditCard } from 'lucide-react';
+import { X, CheckCircle, Printer, Cross, Sparkles, MapPin, Calendar, Banknote, CreditCard, Home, User } from 'lucide-react';
 
 export default function TicketModal({ ticketData, onClose }) {
   if (!ticketData) return null;
@@ -8,7 +8,7 @@ export default function TicketModal({ ticketData, onClose }) {
     window.print();
   };
 
-  const isCash = ticketData.paymentMode === 'cash';
+  const isCash = ticketData.paymentMode === 'Spot Cash' || ticketData.paymentMode === 'cash';
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
@@ -75,7 +75,12 @@ export default function TicketModal({ ticketData, onClose }) {
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase text-[#e5c158]">Ward</p>
+              <p className="text-[10px] font-bold uppercase text-[#e5c158]">House Name</p>
+              <p className="text-sm font-semibold text-white mt-0.5">{ticketData.houseName || '—'}</p>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold uppercase text-[#e5c158]">Ward Number</p>
               <p className="text-sm font-semibold text-[#f4ece1] mt-0.5">{ticketData.parish}</p>
             </div>
 
@@ -84,7 +89,7 @@ export default function TicketModal({ ticketData, onClose }) {
               <p className="text-xs font-mono text-[#f4ece1] mt-0.5">{ticketData.phone}</p>
             </div>
 
-            <div>
+            <div className="col-span-2 pt-2 border-t border-[#382015]">
               <p className="text-[10px] font-bold uppercase text-[#e5c158]">Age & Email</p>
               <p className="text-xs text-[#f4ece1] mt-0.5">{ticketData.age} yrs • {ticketData.email}</p>
             </div>

@@ -3,7 +3,7 @@ import {
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
   Sparkles, User, Phone, MapPin, Mail, Calendar, Eye, Trash2, Cross,
   CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink,
-  Loader2, Database
+  Loader2, Database, Home
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { EVENT_DETAILS } from '../data/mockData';
@@ -17,6 +17,7 @@ export default function Registration({ isOpen, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
+    houseName: '',
     phone: '',
     parish: '',
     age: '',
@@ -130,6 +131,7 @@ export default function Registration({ isOpen, onClose }) {
     const newEntry = {
       ticketId: newTicketId,
       fullName: formData.fullName,
+      houseName: formData.houseName,
       phone: formData.phone,
       parish: formData.parish, // Ward
       age: formData.age,
@@ -171,7 +173,7 @@ export default function Registration({ isOpen, onClose }) {
     setGeneratedTicket(newEntry);
 
     // Reset form
-    setFormData({ fullName: '', phone: '', parish: '', age: '', email: '' });
+    setFormData({ fullName: '', houseName: '', phone: '', parish: '', age: '', email: '' });
     setScreenshotFile(null);
     setScreenshotPreview(null);
     if (paymentMode === 'gpay') {
@@ -404,22 +406,42 @@ export default function Registration({ isOpen, onClose }) {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               
-              {/* Full Name */}
-              <div>
-                <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
-                  Full Name <span className="text-red-400">*</span>
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3.5" />
-                  <input
-                    type="text"
-                    name="fullName"
-                    required
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    placeholder="Enter your full name"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#1a0f0a] border border-[#d4af37]/30 text-white placeholder-gray-500 focus:outline-none focus:border-[#d96b27] text-sm"
-                  />
+              {/* Full Name & House Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
+                    Full Name <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      name="fullName"
+                      required
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      placeholder="Enter your full name"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#1a0f0a] border border-[#d4af37]/30 text-white placeholder-gray-500 focus:outline-none focus:border-[#d96b27] text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
+                    House Name <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Home className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      name="houseName"
+                      required
+                      value={formData.houseName}
+                      onChange={handleChange}
+                      placeholder="Enter your house name"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#1a0f0a] border border-[#d4af37]/30 text-white placeholder-gray-500 focus:outline-none focus:border-[#d96b27] text-sm"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -641,6 +663,9 @@ export default function Registration({ isOpen, onClose }) {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-white text-sm">{item.fullName}</span>
+                        {item.houseName && (
+                          <span className="text-xs text-[#e5c158]">({item.houseName})</span>
+                        )}
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
                           {item.ticketId}
                         </span>
