@@ -551,27 +551,7 @@ export default function Registration({ isOpen, onClose }) {
               </>
             )}
 
-            {/* View Stored Local DB link & Live Sheet Link */}
-            <div className="pt-2 flex flex-col items-center gap-1.5 text-center">
-              <button
-                type="button"
-                onClick={() => setShowAdminModal(true)}
-                className="text-xs text-[#e5c158]/70 hover:text-[#e5c158] underline font-garamond"
-              >
-                View Local Registrations ({registeredList.length})
-              </button>
-
-              <a
-                href={GOOGLE_SHEETS_CONFIG.sheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-[#ff9e58] hover:underline"
-              >
-                <Database className="w-3 h-3" />
-                <span>Open Google Sheet Database</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
+            
 
           </div>
 
