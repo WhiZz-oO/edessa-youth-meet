@@ -21,7 +21,7 @@ export const SCHEDULE_DATA = [
   {
     time: "10:00 AM – 10:30 AM",
     title: "Registration & Welcome",
-    description: "Delegate kit distribution, badging, and warm traditional welcome.",
+    description: "Delegate kit distribution, badging, and welcome.",
     iconName: "UserCheck",
   },
   {
@@ -39,7 +39,7 @@ export const SCHEDULE_DATA = [
   {
     time: "12:00 PM – 1:00 PM",
     title: "Onam Games",
-    description: "Traditional celebrations, tug of war, pookkalam & festive games.",
+    description: "Traditional celebrations, tug of war & festive games.",
     iconName: "Smile",
   },
   {
