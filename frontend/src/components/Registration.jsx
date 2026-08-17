@@ -1,3 +1,4 @@
+import gpayQr from '../assets/gpay-qr.jpg';
 ﻿import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, QrCode, 
@@ -200,7 +201,7 @@ export default function Registration({ isOpen, onClose }) {
 
             {/* QR Code Graphic Box */}
             <div className="p-4 bg-white rounded-2xl shadow-xl text-center border-2 border-[#e5c158] flex flex-col items-center justify-center">
-              <QrCode className="w-32 h-32 text-[#150d09]" />
+              <img src={gpayQr} alt="GPay UPI QR Code - albinmathewsktu70@okaxis" className="w-48 h-48 object-contain rounded-xl shadow-md border border-gray-200" />
               <p className="text-xs font-bold text-[#150d09] mt-2 font-cinzel">
                 Scan & Pay ₹150 via GPay / PhonePe / Paytm
               </p>
