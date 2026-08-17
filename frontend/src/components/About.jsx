@@ -19,7 +19,7 @@ export default function About() {
             Discover the Movement
           </div>
           <h2 className="font-cinzel text-3xl sm:text-5xl font-bold tracking-tight text-[#1c120c] mb-4">
-            About <span className="text-orange-gradient font-black">EDESSA</span>
+            About <span className="text-orange-gradient font-black">HELLO</span>
           </h2>
           <p className="font-garamond text-xl sm:text-2xl italic text-[#4a2c1d]/80">
             "Called to Witness" — Empowering young minds to shine as beacons of hope and faith.
