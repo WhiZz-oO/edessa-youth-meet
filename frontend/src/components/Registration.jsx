@@ -305,25 +305,19 @@ export default function Registration({ isOpen, onClose }) {
       screenshotName: `${newTicketId}_${formData.fullName.replace(/\s+/g, '_')}.jpg`,
     };
 
-    // Send to Google Sheets
+    // Send to Google Sheets (mode: 'no-cors' is REQUIRED for Google Apps Script Web App in browsers)
     if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
       try {
-        const response = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
+        await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
           method: 'POST',
+          mode: 'no-cors',
           headers: {
             'Content-Type': 'text/plain;charset=utf-8',
           },
           body: JSON.stringify(newEntry),
         });
-
-        const resData = await response.json();
-        if (resData && resData.status === 'duplicate') {
-          setIsSubmitting(false);
-          setDuplicateError(resData.message || 'This UPI Transaction ID has already been registered in the database.');
-          return;
-        }
       } catch (err) {
-        console.warn('POST response warning:', err);
+        console.error('Google Sheets submission error:', err);
       }
     }
 
