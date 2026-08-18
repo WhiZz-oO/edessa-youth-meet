@@ -513,6 +513,28 @@ export default function Registration({ isOpen, onClose }) {
                 <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70 space-y-1">
                   <p>🔒 <strong>Anti-Fraud Shield Active:</strong> Each 12-digit UPI Transaction ID is verified and can only be used once.</p>
                 </div>
+
+                {/* GPay Failure Warning Banner */}
+                <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/50 text-xs space-y-2">
+                  <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    <span>GPay Payment Failed or Showing an Error?</span>
+                  </div>
+                  <p className="text-[#f4ece1]/90 leading-relaxed">
+                    If GPay shows <strong className="text-amber-300">&ldquo;Transaction may be risky&rdquo;</strong> or fails — <strong className="text-white">don&apos;t worry!</strong>
+                  </p>
+                  <p className="text-[#f4ece1]/80 leading-relaxed">
+                    Simply register now and pay <strong className="text-[#e5c158]">₹150 cash</strong> at the registration desk on <strong>25 August 2026</strong>.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handlePaymentModeChange('cash')}
+                    className="w-full mt-1 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-[#1c120c] font-extrabold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30"
+                  >
+                    <Banknote className="w-4 h-4" />
+                    Switch to Spot Cash (Pay at Desk) →
+                  </button>
+                </div>
               </>
             ) : (
               /* Spot Cash View */
