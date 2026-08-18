@@ -204,14 +204,16 @@ export default function Registration({ isOpen, onClose }) {
       setIsVerifying(false);
       const textLower = text.toLowerCase();
 
-      // Check 1: Recipient Verification (Albin Mathews / UPI handle / phone)
+            // Check 1: Recipient Verification (Albin Mathews / UPI handle / phone)
       const hasPayeeMatch = 
         textLower.includes('albin') || 
         textLower.includes('mathews') || 
         textLower.includes('albinmathews') || 
         textLower.includes('okaxis') || 
         textLower.includes('oksbi') ||
-        textLower.includes('9207215221');
+        textLower.includes('paytm') ||
+        textLower.includes('9207215221') ||
+        textLower.includes('edessa');
 
       if (!hasPayeeMatch) {
         setVerificationError(
@@ -225,14 +227,33 @@ export default function Registration({ isOpen, onClose }) {
       setPayeeVerified(true);
 
       // Check 2: Extract 12-digit UPI Transaction ID or Google Txn ID
+      // Extract 12-digit UPI Transaction ID from Paytm, GPay, PhonePe, BHIM, etc.
       let detectedTxn = '';
-      const digitMatch = text.match(/\b\d{12}\b/);
-      if (digitMatch) {
-        detectedTxn = digitMatch[0];
-      } else {
-        const googleTxnMatch = text.match(/CICAg[a-zA-Z0-9_-]+/);
-        if (googleTxnMatch) {
-          detectedTxn = googleTxnMatch[0];
+      
+      // Pattern A: Contiguous 12 digits
+      const match12 = text.match(/\b\d{12}\b/);
+      if (match12) {
+        detectedTxn = match12[0];
+      } 
+      // Pattern B: Paytm 4-4-4 grouped format (e.g. 3127 3604 2481)
+      else if (text.match(/\b\d{4}\s+\d{4}\s+\d{4}\b/)) {
+        detectedTxn = text.match(/\b\d{4}\s+\d{4}\s+\d{4}\b/)[0].replace(/\s+/g, '');
+      }
+      // Pattern C: Ref No / UTR / RRN prefixes
+      else if (text.match(/(?:ref\s*(?:no|num|number)?|upi\s*ref|rrn|txn\s*(?:id|no)?|utr)[:.\s]*([0-9\s]{12,18})/i)) {
+        const refMatch = text.match(/(?:ref\s*(?:no|num|number)?|upi\s*ref|rrn|txn\s*(?:id|no)?|utr)[:.\s]*([0-9\s]{12,18})/i);
+        detectedTxn = refMatch[1].replace(/\s+/g, '').slice(0, 12);
+      }
+      // Pattern D: Google Pay transaction strings (CICAg...)
+      else if (text.match(/CICAg[a-zA-Z0-9_-]+/)) {
+        detectedTxn = text.match(/CICAg[a-zA-Z0-9_-]+/)[0];
+      }
+      // Pattern E: Any 12 digits in the text stream
+      else {
+        const rawDigits = text.replace(/[^0-9]/g, '');
+        const any12 = rawDigits.match(/\d{12}/);
+        if (any12) {
+          detectedTxn = any12[0];
         }
       }
 
