@@ -504,7 +504,7 @@ export default function Registration({ isOpen, onClose }) {
                   <div>
                     <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">Beneficiary Name</p>
                     <p className="text-xs font-medium text-[#f4ece1]">
-                      Anwin C M (SMYM Secretary)
+                      Anwin C M (SMYM Treasurer)
                     </p>
                   </div>
                 </div>
