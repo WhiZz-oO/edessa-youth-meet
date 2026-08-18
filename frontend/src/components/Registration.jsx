@@ -444,14 +444,28 @@ export default function Registration({ isOpen, onClose }) {
                   </span>
                 </div>
 
-                {/* Direct Tap to Pay on Mobile */}
-                <a
-                  href={upiPayUrl}
-                  className="w-full py-3 px-4 rounded-xl bg-orange-gradient text-white font-bold text-xs sm:text-sm shadow-lg shadow-[#d96b27]/30 border border-[#e5c158]/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-center"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Tap to Pay ₹150 via UPI App</span>
-                </a>
+                {/* Big Phone Number - Pay Manually */}
+                <div className="bg-[#1a0f0a] border-2 border-[#d4af37] rounded-2xl p-5 text-center space-y-2 shadow-xl">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#d96b27]">Step 1 — Open GPay / PhonePe / Any UPI App</p>
+                  <p className="text-[11px] text-[#f4ece1]/70">Search by phone number and pay ₹150 to:</p>
+                  <div className="flex items-center justify-center gap-3 my-1">
+                    <span className="font-mono text-4xl font-black text-[#e5c158] tracking-wider select-all">
+                      8921332098
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { navigator.clipboard.writeText('8921332098'); setCopiedUpi(true); setTimeout(() => setCopiedUpi(false), 2500); }}
+                      className="p-2 rounded-xl bg-[#3d2417] hover:bg-[#d96b27] text-[#e5c158] hover:text-white transition-colors"
+                    >
+                      {copiedUpi ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs font-bold text-white">Anwin C M</p>
+                  <p className="text-[11px] text-[#f4ece1]/60 font-mono">{EVENT_DETAILS.gpayUpiId}</p>
+                  <div className="mt-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300 font-semibold">
+                    ⚠️ Do NOT use "Tap to Pay" deep links — pay directly from your UPI app
+                  </div>
+                </div>
 
                 {/* QR Code Container */}
                 <div className="bg-[#2a1a12] p-4 rounded-2xl border border-[#4a2c1d] flex flex-col items-center text-center shadow-inner">
@@ -585,7 +599,7 @@ export default function Registration({ isOpen, onClose }) {
           <div className="lg:col-span-7 bg-[#1c120c] p-6 sm:p-8 rounded-3xl border border-[#d4af37]/30 shadow-2xl">
             
             <div className="border-b border-[#382015] pb-4 mb-6">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Step 2: Information</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Step 2 — Fill Your Details</span>
               <h3 className="font-cinzel text-xl font-bold text-white">Fill Registration Details</h3>
             </div>
 
