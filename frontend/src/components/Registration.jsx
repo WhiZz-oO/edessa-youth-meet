@@ -40,7 +40,7 @@ export default function Registration({ isOpen, onClose }) {
   // Existing database Transaction IDs for duplicate protection
   const [usedTxnIds, setUsedTxnIds] = useState([]);
 
-  const upiPayUrl = `upi://pay?pa=${EVENT_DETAILS.gpayUpiId}&pn=Albin%20Mathews&am=150&cu=INR&tn=EDESSA%202026%20Registration`;
+  const upiPayUrl = `upi://pay?pa=${EVENT_DETAILS.gpayUpiId}&pn=Anwin%20C%20M&am=150&cu=INR&tn=EDESSA%202026%20Registration`;
 
   // Fetch all existing transaction IDs from Google Sheet + LocalStorage on mount
   const fetchExistingTransactions = async () => {
@@ -204,20 +204,17 @@ export default function Registration({ isOpen, onClose }) {
       setIsVerifying(false);
       const textLower = text.toLowerCase();
 
-            // Check 1: Recipient Verification (Albin Mathews / UPI handle / phone)
+            // Check 1: Recipient Verification (Anwin C M / UPI handle / phone)
       const hasPayeeMatch = 
-        textLower.includes('albin') || 
-        textLower.includes('mathews') || 
-        textLower.includes('albinmathews') || 
-        textLower.includes('okaxis') || 
-        textLower.includes('oksbi') ||
-        textLower.includes('paytm') ||
-        textLower.includes('9207215221') ||
+        textLower.includes('anwin') || 
+        textLower.includes('8921332098') || 
+        textLower.includes('okbizaxis') || 
+        textLower.includes('8921') ||
         textLower.includes('edessa');
 
       if (!hasPayeeMatch) {
         setVerificationError(
-          'Screenshot Invalid: Payment recipient must be Albin Mathews (albinmathewsktu70@okaxis).'
+          'Screenshot Invalid: Payment recipient must be Anwin C M (8921332098@okbizaxis).'
         );
         setPayeeVerified(false);
         setIsVerified(false);
@@ -459,7 +456,7 @@ export default function Registration({ isOpen, onClose }) {
                 {/* QR Code Container */}
                 <div className="bg-[#2a1a12] p-4 rounded-2xl border border-[#4a2c1d] flex flex-col items-center text-center shadow-inner">
                   <div className="w-56 h-56 bg-white rounded-2xl p-2.5 shadow-2xl border-2 border-[#e5c158] flex items-center justify-center overflow-hidden">
-                    <img src={gpayQr} alt="GPay UPI QR Code - albinmathewsktu70@okaxis" className="w-full h-full object-contain rounded-xl" />
+                    <img src={gpayQr} alt="GPay UPI QR Code - 8921332098@okbizaxis" className="w-full h-full object-contain rounded-xl" />
                   </div>
                   <p className="text-xs font-bold text-[#e5c158] mt-3 font-cinzel tracking-wide">
                     Scan & Pay ₹150 via GPay / PhonePe / Paytm / BHIM
@@ -507,7 +504,7 @@ export default function Registration({ isOpen, onClose }) {
                   <div>
                     <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">Beneficiary Name</p>
                     <p className="text-xs font-medium text-[#f4ece1]">
-                      Albin Mathews (SMYM Unit President)
+                      Anwin C M (SMYM Secretary)
                     </p>
                   </div>
                 </div>
@@ -752,7 +749,7 @@ export default function Registration({ isOpen, onClose }) {
                           {payeeVerified && (
                             <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30">
                               <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                              <span>Paid to Albin Mathews Verified!</span>
+                              <span>Paid to Anwin C M Verified!</span>
                             </div>
                           )}
                         </div>
@@ -766,7 +763,7 @@ export default function Registration({ isOpen, onClose }) {
                           Click or Drag & Drop GPay Payment Screenshot
                         </p>
                         <p className="text-[10px] text-gray-400">
-                          AI will verify payment to <strong>albinmathewsktu70@okaxis</strong> and detect 12-digit UPI Txn ID
+                          AI will verify payment to <strong>8921332098@okbizaxis</strong> and detect 12-digit UPI Txn ID
                         </p>
                       </div>
                     )}

@@ -13,8 +13,8 @@ export const EVENT_DETAILS = {
   tagline: "Arise. Shine. Witness.",
   audience: "Only for Chemmalamattom Parish Youth",
   registrationFee: "Rs.150 per person",
-  gpayNumber: "+91 9207215221",
-  gpayUpiId: "albinmathewsktu70@okaxis",
+  gpayNumber: "+91 8921332098",
+  gpayUpiId: "8921332098@okbizaxis",
 };
 
 export const SCHEDULE_DATA = [
