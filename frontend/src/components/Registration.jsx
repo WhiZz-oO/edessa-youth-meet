@@ -463,7 +463,6 @@ export default function Registration({ isOpen, onClose }) {
                   <p className="text-xs font-bold text-white">Anwin C M</p>
                   <p className="text-[11px] text-[#f4ece1]/60 font-mono">{EVENT_DETAILS.gpayUpiId}</p>
                   <div className="mt-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300 font-semibold">
-                    ⚠️ Do NOT use "Tap to Pay" deep links — pay directly from your UPI app
                   </div>
                 </div>
 
