@@ -275,12 +275,17 @@ export default function ContinuousScanner({ onClose }) {
         <div className="lg:col-span-6 p-4 sm:p-6 flex flex-col space-y-4 overflow-y-auto border-r border-[#382015]">
           
           {/* Camera Viewfinder Box */}
-          <div className="relative rounded-3xl overflow-hidden border-2 border-[#e5c158] bg-black shadow-2xl p-1">
-            <div id="continuous-qr-reader" className="w-full min-h-[380px] sm:min-h-[460px] bg-black rounded-2xl overflow-hidden flex items-center justify-center"></div>
+          <div className="relative rounded-3xl overflow-hidden border-2 border-[#e5c158] bg-black shadow-2xl p-1 flex-shrink-0 w-full h-[340px] sm:h-[420px]">
+            <div id="continuous-qr-reader" className="w-full h-full bg-black rounded-2xl overflow-hidden flex items-center justify-center"></div>
             
             {/* Guide overlay */}
             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
-              <div className="w-64 h-64 sm:w-72 sm:h-72 border-2 border-dashed border-[#e5c158] rounded-3xl animate-pulse shadow-2xl"></div>
+              <div className="w-56 h-56 sm:w-64 sm:h-64 border-2 border-dashed border-[#e5c158] rounded-3xl animate-pulse shadow-2xl"></div>
+              <p className="text-[11px] font-bold text-white bg-black/70 px-3.5 py-1 rounded-full mt-3 backdrop-blur-md border border-[#e5c158]/30">
+                Aim at participant's QR code
+              </p>
+            </div>
+          </div>
               <p className="text-[11px] font-bold text-white bg-black/60 px-3 py-1 rounded-full mt-2 backdrop-blur-sm">
                 Aim at participant's QR code
               </p>
