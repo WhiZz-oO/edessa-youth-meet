@@ -15,9 +15,8 @@ export default function TicketModal({ ticketData, onClose }) {
   useEffect(() => {
     if (ticketData?.ticketId) {
       // Build unique check-in payload URL encoded in the QR code
-      const checkinUrl = `https://edessa-youth-meet.vercel.app/?checkin=${encodeURIComponent(ticketData.ticketId)}&name=${encodeURIComponent(ticketData.fullName || '')}&ward=${encodeURIComponent(ticketData.parish || '')}&house=${encodeURIComponent(ticketData.houseName || '')}&phone=${encodeURIComponent(ticketData.phone || '')}&pay=${isCash ? 'cash' : 'online'}`;
-
-      QRCode.toDataURL(checkinUrl, {
+      const qrPayload = String(ticketData.ticketId || '').trim();
+      QRCode.toDataURL(qrPayload, {
         width: 320,
         margin: 1,
         color: {
