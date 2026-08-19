@@ -286,11 +286,6 @@ export default function ContinuousScanner({ onClose }) {
               </p>
             </div>
           </div>
-              <p className="text-[11px] font-bold text-white bg-black/60 px-3 py-1 rounded-full mt-2 backdrop-blur-sm">
-                Aim at participant's QR code
-              </p>
-            </div>
-          </div>
 
           {cameraError && (
             <div className="p-3.5 rounded-2xl bg-red-500/20 border border-red-500 text-red-200 text-xs text-center font-medium">
