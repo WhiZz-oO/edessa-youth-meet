@@ -1,20 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  CheckCircle, AlertCircle, Upload, FileImage, ShieldCheck, 
-  Sparkles, User, Phone, MapPin, Mail, Calendar, Cross,
-  CreditCard, Banknote, HelpCircle, ArrowRight, Copy, Check, ExternalLink,
-  Loader2, Home, Image, Key, AlertTriangle
+  CheckCircle, ShieldCheck, Sparkles, User, Phone, MapPin, Mail, 
+  Banknote, Loader2, Home, Calendar, Clock, Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import Tesseract from 'tesseract.js';
-import { EVENT_DETAILS } from '../data/mockData';
 import { GOOGLE_SHEETS_CONFIG } from '../data/googleSheetsConfig';
 import TicketModal from './TicketModal';
-import gpayQr from '../assets/gpay-qr.png';
 
-export default function Registration({ isOpen, onClose }) {
-  const [paymentMode, setPaymentMode] = useState('gpay'); // 'gpay' or 'cash'
-  const [copiedUpi, setCopiedUpi] = useState(false);
+export default function Registration() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -25,55 +18,7 @@ export default function Registration({ isOpen, onClose }) {
     email: '',
   });
 
-  const [screenshotFile, setScreenshotFile] = useState(null);
-  const [screenshotPreview, setScreenshotPreview] = useState(null);
-  const [screenshotBase64, setScreenshotBase64] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [ocrProgress, setOcrProgress] = useState(0);
-  const [isVerified, setIsVerified] = useState(false);
-  const [payeeVerified, setPayeeVerified] = useState(false);
-  const [verificationError, setVerificationError] = useState('');
-  const [duplicateError, setDuplicateError] = useState('');
-  const [txnRef, setTxnRef] = useState('');
   const [generatedTicket, setGeneratedTicket] = useState(null);
-
-  // Existing database Transaction IDs for duplicate protection
-  const [usedTxnIds, setUsedTxnIds] = useState([]);
-
-  const upiPayUrl = `upi://pay?pa=${EVENT_DETAILS.gpayUpiId}&pn=Anwin%20C%20M&am=150&cu=INR&tn=EDESSA%202026%20Registration`;
-
-  // Fetch all existing transaction IDs from Google Sheet + LocalStorage on mount
-  const fetchExistingTransactions = async () => {
-    let localTxns = [];
-    const saved = localStorage.getItem('edessa_registrations');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        localTxns = parsed.map(item => String(item.txnRef || '').trim()).filter(Boolean);
-      } catch (e) {
-        console.error('Failed to parse registrations', e);
-      }
-    }
-
-    if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
-      try {
-        const res = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl);
-        const data = await res.json();
-        if (data && data.txns && Array.isArray(data.txns)) {
-          const combined = Array.from(new Set([...localTxns, ...data.txns.map(t => String(t).trim())]));
-          setUsedTxnIds(combined);
-          return;
-        }
-      } catch (err) {
-        console.warn('Could not fetch remote txns:', err);
-      }
-    }
-    setUsedTxnIds(localTxns);
-  };
-
-  useEffect(() => {
-    fetchExistingTransactions();
-  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -82,222 +27,9 @@ export default function Registration({ isOpen, onClose }) {
     });
   };
 
-  const handleCopyUpi = () => {
-    navigator.clipboard.writeText(EVENT_DETAILS.gpayUpiId);
-    setCopiedUpi(true);
-    setTimeout(() => setCopiedUpi(false), 2500);
-  };
-
-  const handlePaymentModeChange = (mode) => {
-    setPaymentMode(mode);
-    setVerificationError('');
-    setDuplicateError('');
-    if (mode === 'cash') {
-      setIsVerified(true);
-      setTxnRef('CASH-DESK');
-    } else {
-      if (!txnRef || txnRef === 'CASH-DESK') {
-        setIsVerified(false);
-        setTxnRef('');
-      }
-    }
-  };
-
-  // Compress image
-  const compressImage = (file, callback) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = document.createElement('img');
-      img.src = event.target.result;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxDim = 1200;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height && width > maxDim) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else if (height > maxDim) {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const compressedData = canvas.toDataURL('image/jpeg', 0.85);
-        callback(compressedData);
-      };
-    };
-  };
-
-  // Validate Transaction ID for duplicates
-  const checkDuplicate = (idToCheck) => {
-    if (!idToCheck || idToCheck === 'SPOT-CASH' || idToCheck === 'CASH-DESK') return false;
-    const cleanId = String(idToCheck).trim();
-    return usedTxnIds.includes(cleanId);
-  };
-
-  const handleTxnChange = (value) => {
-    const cleanVal = value.trim();
-    setTxnRef(cleanVal);
-    setDuplicateError('');
-
-    if (!cleanVal) {
-      setIsVerified(false);
-      return;
-    }
-
-    if (checkDuplicate(cleanVal)) {
-      setDuplicateError(`❌ Duplicate Detected: Transaction ID (${cleanVal}) has already been registered in the system!`);
-      setIsVerified(false);
-      return;
-    }
-
-    if (payeeVerified && cleanVal.length >= 8) {
-      setIsVerified(true);
-    }
-  };
-
-  const handleScreenshotChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setVerificationError('Please select a valid image file (PNG, JPG, JPEG)');
-      return;
-    }
-
-    setScreenshotFile(file);
-    setVerificationError('');
-    setDuplicateError('');
-    setIsVerified(false);
-    setPayeeVerified(false);
-    setTxnRef('');
-    setOcrProgress(0);
-
-    compressImage(file, (compressedBase64) => {
-      setScreenshotPreview(compressedBase64);
-      setScreenshotBase64(compressedBase64);
-      performOcrVerification(compressedBase64);
-    });
-  };
-
-  const performOcrVerification = async (imageSource) => {
-    setIsVerifying(true);
-    setVerificationError('');
-    setDuplicateError('');
-
-    try {
-      const { data: { text } } = await Tesseract.recognize(imageSource, 'eng', {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            setOcrProgress(Math.round(m.progress * 100));
-          }
-        }
-      });
-
-      setIsVerifying(false);
-      const textLower = text.toLowerCase();
-
-            // Check 1: Recipient Verification (Anwin C M / UPI handle / phone)
-      const hasPayeeMatch = 
-        textLower.includes('anwin') || 
-        textLower.includes('8921332098') || 
-        textLower.includes('okbizaxis') || 
-        textLower.includes('8921') ||
-        textLower.includes('edessa');
-
-      if (!hasPayeeMatch) {
-        setVerificationError(
-          'Screenshot Invalid: Payment recipient must be Anwin C M (8921332098@okbizaxis).'
-        );
-        setPayeeVerified(false);
-        setIsVerified(false);
-        return;
-      }
-
-      setPayeeVerified(true);
-
-      // Check 2: Extract 12-digit UPI Transaction ID or Google Txn ID
-      // Extract 12-digit UPI Transaction ID from Paytm, GPay, PhonePe, BHIM, etc.
-      let detectedTxn = '';
-      
-      // Pattern A: Contiguous 12 digits
-      const match12 = text.match(/\b\d{12}\b/);
-      if (match12) {
-        detectedTxn = match12[0];
-      } 
-      // Pattern B: Paytm 4-4-4 grouped format (e.g. 3127 3604 2481)
-      else if (text.match(/\b\d{4}\s+\d{4}\s+\d{4}\b/)) {
-        detectedTxn = text.match(/\b\d{4}\s+\d{4}\s+\d{4}\b/)[0].replace(/\s+/g, '');
-      }
-      // Pattern C: Ref No / UTR / RRN prefixes
-      else if (text.match(/(?:ref\s*(?:no|num|number)?|upi\s*ref|rrn|txn\s*(?:id|no)?|utr)[:.\s]*([0-9\s]{12,18})/i)) {
-        const refMatch = text.match(/(?:ref\s*(?:no|num|number)?|upi\s*ref|rrn|txn\s*(?:id|no)?|utr)[:.\s]*([0-9\s]{12,18})/i);
-        detectedTxn = refMatch[1].replace(/\s+/g, '').slice(0, 12);
-      }
-      // Pattern D: Google Pay transaction strings (CICAg...)
-      else if (text.match(/CICAg[a-zA-Z0-9_-]+/)) {
-        detectedTxn = text.match(/CICAg[a-zA-Z0-9_-]+/)[0];
-      }
-      // Pattern E: Any 12 digits in the text stream
-      else {
-        const rawDigits = text.replace(/[^0-9]/g, '');
-        const any12 = rawDigits.match(/\d{12}/);
-        if (any12) {
-          detectedTxn = any12[0];
-        }
-      }
-
-      if (detectedTxn) {
-        setTxnRef(detectedTxn);
-
-        // Check 3: Immediate Duplicate Validation
-        if (checkDuplicate(detectedTxn)) {
-          setDuplicateError(
-            `Duplicate Payment Blocked: Transaction ID (${detectedTxn}) has already been used for registration!`
-          );
-          setIsVerified(false);
-          return;
-        }
-
-        setIsVerified(true);
-      } else {
-        // If OCR could not read 12 digits automatically, prompt user to enter the exact 12 digits
-        setVerificationError(
-          'Could not auto-read 12-digit UPI ID from image. Please type the 12-digit Transaction ID shown on your screenshot below.'
-        );
-        setIsVerified(false);
-      }
-    } catch (err) {
-      console.error('OCR Error:', err);
-      setIsVerifying(false);
-      setVerificationError('Could not process image text. Please enter the 12-digit UPI Transaction ID below.');
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (paymentMode === 'gpay') {
-      if (!txnRef || txnRef.length < 8) {
-        setVerificationError('Please provide a valid UPI Transaction ID (12 digits).');
-        return;
-      }
-
-      if (checkDuplicate(txnRef)) {
-        setDuplicateError(`Duplicate Payment Blocked: Transaction ID (${txnRef}) has already been used!`);
-        return;
-      }
-    }
-
     setIsSubmitting(true);
-    setDuplicateError('');
 
     const newTicketId = 'EDESSA-2026-' + Math.floor(1000 + Math.random() * 9000);
     const dateFormatted = new Date().toLocaleDateString('en-IN', {
@@ -310,22 +42,23 @@ export default function Registration({ isOpen, onClose }) {
 
     const newEntry = {
       ticketId: newTicketId,
-      fullName: formData.fullName,
-      houseName: formData.houseName,
-      phone: formData.phone,
-      parish: formData.parish, // Ward
-      age: formData.age,
-      email: formData.email,
-      paymentMode: paymentMode === 'cash' ? 'Spot Cash' : 'Google Pay (UPI)',
-      txnRef: paymentMode === 'cash' ? 'SPOT-CASH' : txnRef,
+      fullName: formData.fullName.trim(),
+      houseName: formData.houseName.trim(),
+      phone: formData.phone.trim(),
+      parish: formData.parish.trim(), // Ward
+      age: formData.age.trim(),
+      email: formData.email.trim(),
+      paymentMode: 'Spot Cash',
+      txnRef: 'SPOT-CASH',
       dateRegistered: dateFormatted,
-      screenshotData: paymentMode === 'gpay' ? screenshotBase64 : '',
-      screenshotName: `${newTicketId}_${formData.fullName.replace(/\s+/g, '_')}.jpg`,
+      screenshotData: '',
+      screenshotName: '',
     };
 
-    // Send to Google Sheets (mode: 'no-cors' is REQUIRED for Google Apps Script Web App in browsers)
+    // Dual-Channel Submission to Google Sheets
     if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
       try {
+        // Channel 1: standard no-cors fetch
         await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
           method: 'POST',
           mode: 'no-cors',
@@ -335,14 +68,44 @@ export default function Registration({ isOpen, onClose }) {
           body: JSON.stringify(newEntry),
         });
       } catch (err) {
-        console.error('Google Sheets submission error:', err);
+        console.warn('Direct fetch warning:', err);
+      }
+
+      // Channel 2: Background hidden form submit (100% bypasses CORS & ad-blockers)
+      try {
+        const iframeName = 'sheets_hidden_iframe_' + Date.now();
+        let iframe = document.createElement('iframe');
+        iframe.name = iframeName;
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = GOOGLE_SHEETS_CONFIG.webAppUrl;
+        form.target = iframeName;
+        form.style.display = 'none';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'data';
+        input.value = JSON.stringify(newEntry);
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+
+        setTimeout(() => {
+          try {
+            document.body.removeChild(form);
+            document.body.removeChild(iframe);
+          } catch (e) {}
+        }, 5000);
+      } catch (err) {
+        console.warn('Iframe fallback warning:', err);
       }
     }
 
-    // Save locally and add to usedTxnIds
-    if (paymentMode === 'gpay') {
-      setUsedTxnIds(prev => [...prev, txnRef]);
-    }
+    // Save locally
     const saved = localStorage.getItem('edessa_registrations');
     let currentList = [];
     if (saved) {
@@ -355,8 +118,8 @@ export default function Registration({ isOpen, onClose }) {
     setIsSubmitting(false);
 
     confetti({
-      particleCount: 100,
-      spread: 70,
+      particleCount: 120,
+      spread: 75,
       origin: { y: 0.6 },
     });
 
@@ -364,14 +127,6 @@ export default function Registration({ isOpen, onClose }) {
 
     // Reset form
     setFormData({ fullName: '', houseName: '', phone: '', parish: '', age: '', email: '' });
-    setScreenshotFile(null);
-    setScreenshotPreview(null);
-    setScreenshotBase64('');
-    if (paymentMode === 'gpay') {
-      setIsVerified(false);
-      setPayeeVerified(false);
-      setTxnRef('');
-    }
   };
 
   return (
@@ -392,205 +147,79 @@ export default function Registration({ isOpen, onClose }) {
             Register for EDESSA 2026
           </h2>
           <p className="font-garamond text-xl italic text-[#f4ece1]/80">
-            Complete your delegate details and select your preferred payment mode (GPay / Cash)
+            Fill your details below to register and download your official Delegate Pass (Spot Cash Payment at Venue)
           </p>
         </div>
 
-        {/* Payment Mode Selector Tabs */}
-        <div className="max-w-md mx-auto mb-10 p-1.5 rounded-2xl bg-[#1c120c] border border-[#d4af37]/30 flex items-center shadow-xl">
-          <button
-            type="button"
-            onClick={() => handlePaymentModeChange('gpay')}
-            className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${
-              paymentMode === 'gpay'
-                ? 'bg-orange-gradient text-white shadow-lg border border-[#e5c158]/50 scale-[1.02]'
-                : 'text-[#f4ece1]/70 hover:text-white hover:bg-[#2a1a12]'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            Google Pay / UPI
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handlePaymentModeChange('cash')}
-            className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${
-              paymentMode === 'cash'
-                ? 'bg-orange-gradient text-white shadow-lg border border-[#e5c158]/50 scale-[1.02]'
-                : 'text-[#f4ece1]/70 hover:text-white hover:bg-[#2a1a12]'
-            }`}
-          >
-            <Banknote className="w-4 h-4" />
-            Spot Cash (Pay at Desk)
-          </button>
-        </div>
-
-        {/* Form & Payment Container */}
+        {/* Form & Info Container */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* Left Column: Payment Details */}
+          {/* Left Column: Event & Spot Payment Guidelines */}
           <div className="lg:col-span-5 bg-[#1c120c] p-6 sm:p-8 rounded-3xl border border-[#d4af37]/30 shadow-2xl space-y-6">
             
-            {paymentMode === 'gpay' ? (
-              /* GPay / UPI View */
-              <>
-                <div className="flex items-center justify-between border-b border-[#382015] pb-4">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Payment Mode</span>
-                    <h3 className="font-cinzel text-xl font-bold text-white">GPay / UPI Payment</h3>
-                  </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#d96b27] text-white shadow-md">
-                    ₹150
-                  </span>
-                </div>
+            {/* Header info badge */}
+            <div className="flex items-center justify-between border-b border-[#382015] pb-4">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Payment Mode</span>
+                <h3 className="font-cinzel text-xl font-bold text-white">Spot Cash (Pay at Desk)</h3>
+              </div>
+              <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-[#e5c158] text-[#1c120c] shadow-md">
+                ₹150
+              </span>
+            </div>
 
-                {/* Big Phone Number - Pay Manually */}
-                <div className="bg-[#1a0f0a] border-2 border-[#d4af37] rounded-2xl p-5 text-center space-y-2 shadow-xl">
-                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#d96b27]">Step 1 — Open GPay / PhonePe / Any UPI App</p>
-                  <p className="text-[11px] text-[#f4ece1]/70">Search by phone number and pay ₹150 to:</p>
-                  <div className="flex items-center justify-center gap-3 my-1">
-                    <span className="font-mono text-4xl font-black text-[#e5c158] tracking-wider select-all">
-                      8921332098
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => { navigator.clipboard.writeText('8921332098'); setCopiedUpi(true); setTimeout(() => setCopiedUpi(false), 2500); }}
-                      className="p-2 rounded-xl bg-[#3d2417] hover:bg-[#d96b27] text-[#e5c158] hover:text-white transition-colors"
-                    >
-                      {copiedUpi ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs font-bold text-white">Anwin C M</p>
-                  <p className="text-[11px] text-[#f4ece1]/60 font-mono">{EVENT_DETAILS.gpayUpiId}</p>
-                  <div className="mt-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300 font-semibold">
-                  </div>
-                </div>
+            {/* Main info card */}
+            <div className="py-6 px-5 rounded-2xl bg-[#2a1a12] border border-[#d4af37]/30 text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-[#3d2417] text-[#e5c158] flex items-center justify-center mx-auto text-3xl shadow-inner border border-[#d4af37]/40">
+                <Banknote className="w-8 h-8 text-[#e5c158]" />
+              </div>
 
-                {/* QR Code Container */}
-                <div className="bg-[#2a1a12] p-4 rounded-2xl border border-[#4a2c1d] flex flex-col items-center text-center shadow-inner">
-                  <div className="w-56 h-56 bg-white rounded-2xl p-2.5 shadow-2xl border-2 border-[#e5c158] flex items-center justify-center overflow-hidden">
-                    <img src={gpayQr} alt="GPay UPI QR Code - 8921332098@okbizaxis" className="w-full h-full object-contain rounded-xl" />
-                  </div>
-                  <p className="text-xs font-bold text-[#e5c158] mt-3 font-cinzel tracking-wide">
-                    Scan & Pay ₹150 via GPay / PhonePe / Paytm / BHIM
-                  </p>
-                  <p className="text-[11px] text-[#f4ece1]/70 mt-0.5">
-                    Amount (₹150) & Note are pre-configured in QR code
-                  </p>
-                </div>
+              <div>
+                <h4 className="font-cinzel text-lg font-bold text-gold-gradient">
+                  Pay at Registration Counter
+                </h4>
+                <p className="text-xs text-[#f4ece1]/80 mt-2 leading-relaxed">
+                  Register online now to reserve your seat and generate your <strong className="text-[#e5c158]">Official Delegate Pass</strong>. You can pay the registration fee of <strong className="text-[#e5c158]">₹150 in cash</strong> at the counter upon arrival.
+                </p>
+              </div>
 
-                {/* UPI Details Box */}
-                <div className="p-4 rounded-2xl bg-[#2a1a12] border border-[#4a2c1d] space-y-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">UPI ID</p>
-                      <p className="font-mono text-sm font-bold text-[#e5c158]">
-                        {EVENT_DETAILS.gpayUpiId}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCopyUpi}
-                      className="px-3 py-1.5 rounded-lg bg-[#3d2417] text-[#e5c158] hover:bg-[#d96b27] hover:text-white transition-colors flex items-center gap-1 font-bold text-xs"
-                    >
-                      {copiedUpi ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-green-400" />
-                          <span className="text-green-400">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+              {/* Benefits list */}
+              <div className="p-3.5 rounded-xl bg-[#1c120c] border border-[#4a2c1d] text-left text-xs text-[#f4ece1]/80 space-y-2">
+                <p className="flex items-center gap-2 text-green-400 font-semibold">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>Instant Delegate Pass with Unique ID</span>
+                </p>
+                <p className="flex items-center gap-2 text-green-400 font-semibold">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>No UPI app or screenshot upload needed</span>
+                </p>
+                <p className="flex items-center gap-2 text-[#ff9e58] font-semibold">
+                  <Check className="w-4 h-4 flex-shrink-0" />
+                  <span>Direct submission to event database</span>
+                </p>
+              </div>
+            </div>
 
-                  <div>
-                    <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">GPay Contact Number</p>
-                    <p className="font-mono text-sm font-bold text-white">
-                      {EVENT_DETAILS.gpayNumber}
-                    </p>
-                  </div>
+            {/* Event Schedule Info */}
+            <div className="p-4 rounded-2xl bg-[#2a1a12] border border-[#4a2c1d] space-y-3 text-xs">
+              <div className="flex items-center gap-2.5 text-[#e5c158] font-bold">
+                <Calendar className="w-4 h-4 text-[#d96b27]" />
+                <span>25 August 2026 • Tuesday</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-[#f4ece1]/85">
+                <Clock className="w-4 h-4 text-[#d96b27]" />
+                <span>10:00 AM Onwards</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-[#f4ece1]/85">
+                <MapPin className="w-4 h-4 text-[#d96b27]" />
+                <span>12 Apostles Auditorium, Chemmalamattom</span>
+              </div>
+            </div>
 
-                  <div>
-                    <p className="text-[#f4ece1]/60 font-semibold uppercase text-[10px]">Beneficiary Name</p>
-                    <p className="text-xs font-medium text-[#f4ece1]">
-                      Anwin C M (SMYM Treasurer)
-                    </p>
-                  </div>
-                </div>
-
-                {/* Verification Note */}
-                <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70 space-y-1">
-                  <p>🔒 <strong>Anti-Fraud Shield Active:</strong> Each 12-digit UPI Transaction ID is verified and can only be used once.</p>
-                </div>
-
-                {/* GPay Failure Warning Banner */}
-                <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/50 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                    <span>GPay Payment Failed or Showing an Error?</span>
-                  </div>
-                  <p className="text-[#f4ece1]/90 leading-relaxed">
-                    If GPay shows <strong className="text-amber-300">&ldquo;Transaction may be risky&rdquo;</strong> or fails — <strong className="text-white">don&apos;t worry!</strong>
-                  </p>
-                  <p className="text-[#f4ece1]/80 leading-relaxed">
-                    Simply register now and pay <strong className="text-[#e5c158]">₹150 cash</strong> at the registration desk on <strong>25 August 2026</strong>.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handlePaymentModeChange('cash')}
-                    className="w-full mt-1 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-[#1c120c] font-extrabold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30"
-                  >
-                    <Banknote className="w-4 h-4" />
-                    Switch to Spot Cash (Pay at Desk) →
-                  </button>
-                </div>
-              </>
-            ) : (
-              /* Spot Cash View */
-              <>
-                <div className="flex items-center justify-between border-b border-[#382015] pb-4">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Payment Mode</span>
-                    <h3 className="font-cinzel text-xl font-bold text-white">Spot Cash Payment</h3>
-                  </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#e5c158] text-[#1c120c]">
-                    ₹150
-                  </span>
-                </div>
-
-                <div className="py-8 px-4 rounded-2xl bg-[#2a1a12] border border-[#d4af37]/30 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-[#3d2417] text-[#e5c158] flex items-center justify-center mx-auto text-3xl shadow-inner border border-[#d4af37]/40">
-                    <Banknote className="w-8 h-8 text-[#e5c158]" />
-                  </div>
-
-                  <div>
-                    <h4 className="font-cinzel text-lg font-bold text-gold-gradient">
-                      Pay at Registration Desk
-                    </h4>
-                    <p className="text-xs text-[#f4ece1]/80 mt-2 leading-relaxed">
-                      You can pay the registration fee of <strong className="text-[#e5c158]">₹150 in cash</strong> directly at the counter upon arrival on <strong>25 August 2026</strong>.
-                    </p>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-[#1c120c] border border-[#4a2c1d] text-left text-xs text-[#f4ece1]/75 space-y-1.5">
-                    <p className="flex items-center gap-1.5 text-green-400 font-semibold">
-                      <CheckCircle className="w-4 h-4" /> No screenshot upload required
-                    </p>
-                    <p className="flex items-center gap-1.5 text-[#ff9e58] font-semibold">
-                      <Sparkles className="w-4 h-4" /> Instant ticket generation
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70">
-                  <p>📍 <strong>Venue:</strong> 12 Apostles Auditorium, Chemmalamattom</p>
-                </div>
-              </>
-            )}
+            {/* Venue instructions */}
+            <div className="p-3.5 rounded-xl bg-[#2a1a12]/60 border border-[#4a2c1d] text-[11px] text-[#f4ece1]/70 leading-relaxed">
+              <p>💡 <strong>Note:</strong> After registering, save or screenshot your digital ticket pass and present it at the registration counter on the day of the event.</p>
+            </div>
 
           </div>
 
@@ -598,21 +227,9 @@ export default function Registration({ isOpen, onClose }) {
           <div className="lg:col-span-7 bg-[#1c120c] p-6 sm:p-8 rounded-3xl border border-[#d4af37]/30 shadow-2xl">
             
             <div className="border-b border-[#382015] pb-4 mb-6">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Step 2 — Fill Your Details</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Delegate Information</span>
               <h3 className="font-cinzel text-xl font-bold text-white">Fill Registration Details</h3>
             </div>
-
-            {/* Duplicate Error Banner */}
-            {duplicateError && (
-              <div className="mb-6 p-4 rounded-2xl bg-red-500/20 border-2 border-red-500 text-red-200 text-xs flex items-start gap-3 shadow-lg animate-bounce">
-                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-red-400 text-sm">❌ Duplicate Payment Rejected</p>
-                  <p className="mt-1 font-semibold leading-relaxed">{duplicateError}</p>
-                  <p className="text-[11px] text-red-300/90 mt-1">This transaction ID has already been recorded for a previous registration. Each payment screenshot can only be used once.</p>
-                </div>
-              </div>
-            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               
@@ -707,15 +324,12 @@ export default function Registration({ isOpen, onClose }) {
                     required
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#1a0f0a] border border-[#d4af37]/30 text-white placeholder-gray-500 focus:outline-none focus:border-[#d96b27] text-sm cursor-pointer appearance-none"
                   >
-                    <option value="">Select your Ward (01 – 30)</option>
-                    {Array.from({ length: 30 }, (_, i) => {
-                      const wardNum = String(i + 1).padStart(2, '0');
-                      return (
-                        <option key={i + 1} value={`Ward ${wardNum}`}>
-                          Ward {wardNum}
-                        </option>
-                      );
-                    })}
+                    <option value="">Select your Ward (1 – 30)</option>
+                    {Array.from({ length: 30 }, (_, i) => (
+                      <option key={i + 1} value={`Ward ${i + 1}`}>
+                        Ward {i + 1}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -739,136 +353,26 @@ export default function Registration({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Conditional GPay Screenshot Upload Area */}
-              {paymentMode === 'gpay' && (
-                <div className="pt-2 space-y-3">
-                  <label className="block text-xs font-bold uppercase text-[#e5c158] mb-1.5">
-                    Upload GPay Payment Screenshot <span className="text-red-400">*</span>
-                  </label>
-
-                  <div className="relative border-2 border-dashed border-[#d4af37]/40 hover:border-[#d96b27] rounded-2xl p-4 text-center bg-[#1a0f0a] transition-all cursor-pointer group">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleScreenshotChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
-                    
-                    {screenshotPreview ? (
-                      <div className="flex flex-col sm:flex-row items-center gap-4 text-left p-2">
-                        <img
-                          src={screenshotPreview}
-                          alt="GPay Screenshot"
-                          className="w-20 h-24 object-cover rounded-xl border border-[#e5c158] shadow-md flex-shrink-0"
-                        />
-                        <div className="space-y-1.5 flex-grow">
-                          <p className="text-xs font-bold text-white line-clamp-1">
-                            {screenshotFile?.name}
-                          </p>
-                          
-                          {isVerifying && (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2 text-xs text-amber-400 font-medium">
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Scanning payment details via AI OCR... ({ocrProgress}%)</span>
-                              </div>
-                              <div className="w-full h-1.5 bg-[#2a1a12] rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-orange-gradient transition-all duration-300 rounded-full"
-                                  style={{ width: `${Math.max(10, ocrProgress)}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {payeeVerified && (
-                            <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30">
-                              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                              <span>Paid to Anwin C M Verified!</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 py-4">
-                        <div className="w-12 h-12 rounded-full bg-[#3d2417] text-[#e5c158] group-hover:bg-[#d96b27] group-hover:text-white flex items-center justify-center mx-auto transition-colors">
-                          <Upload className="w-6 h-6" />
-                        </div>
-                        <p className="text-xs font-semibold text-white">
-                          Click or Drag & Drop GPay Payment Screenshot
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          AI will verify payment to <strong>8921332098@okbizaxis</strong> and detect 12-digit UPI Txn ID
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Read-Only Verified UPI Transaction ID Display */}
-                  {txnRef && (
-                    <div className="p-3.5 rounded-2xl bg-[#1a0f0a] border border-green-500/30 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-[11px] font-bold uppercase text-[#e5c158] flex items-center gap-1.5">
-                          <Key className="w-3.5 h-3.5 text-green-400" />
-                          <span>Extracted UPI Transaction ID (Read-Only)</span>
-                        </label>
-                        <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
-                          🔒 Verified
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          readOnly
-                          value={txnRef}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[#2a1a12] border border-green-500/40 text-green-400 font-mono text-xs cursor-not-allowed select-all focus:outline-none opacity-90"
-                        />
-                      </div>
-                      <p className="text-[10px] text-[#f4ece1]/60">
-                        Auto-extracted from your uploaded payment screenshot.
-                      </p>
-                    </div>
-                  )}
-
-                  {verificationError && (
-                    <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                      <span>{verificationError}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting || !!duplicateError || (paymentMode === 'gpay' && (!isVerified || !txnRef))}
-                className={`w-full py-4 rounded-2xl font-extrabold text-base transition-all duration-300 shadow-xl border flex items-center justify-center gap-2 ${
-                  !duplicateError && (paymentMode === 'cash' || (isVerified && txnRef))
-                    ? 'bg-orange-gradient text-white border-[#e5c158]/60 shadow-[#d96b27]/40 hover:scale-[1.01] active:scale-[0.99] cursor-pointer'
-                    : 'bg-[#2a1a12] text-gray-500 border-[#382015] cursor-not-allowed opacity-70'
-                }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Verifying Duplicates & Saving Registration...</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck className="w-5 h-5" />
-                    <span>
-                      {duplicateError
-                        ? 'Duplicate Payment - Cannot Submit'
-                        : paymentMode === 'cash'
-                        ? 'Confirm Registration (Spot Cash)'
-                        : isVerified && txnRef
-                        ? 'Confirm & Generate Delegate Ticket'
-                        : 'Upload Valid GPay Screenshot to Register'}
-                    </span>
-                  </>
-                )}
-              </button>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 rounded-2xl font-extrabold text-base transition-all duration-300 shadow-xl border flex items-center justify-center gap-2 bg-orange-gradient text-white border-[#e5c158]/60 shadow-[#d96b27]/40 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Submitting Registration to Database...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-5 h-5" />
+                      <span>Confirm Registration &amp; Generate Delegate Pass</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
             </form>
 
