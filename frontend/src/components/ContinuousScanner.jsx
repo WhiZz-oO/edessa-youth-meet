@@ -65,9 +65,15 @@ export default function ContinuousScanner({ onClose }) {
         scannerRef.current = html5QrCode;
 
         const config = {
-          fps: 15,
-          qrbox: { width: 260, height: 260 },
-          aspectRatio: 1.0,
+          fps: 20,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const edgeSize = Math.floor(minEdge * 0.85);
+            return {
+              width: Math.max(260, edgeSize),
+              height: Math.max(260, edgeSize)
+            };
+          },
         };
 
         await html5QrCode.start(
@@ -270,11 +276,11 @@ export default function ContinuousScanner({ onClose }) {
           
           {/* Camera Viewfinder Box */}
           <div className="relative rounded-3xl overflow-hidden border-2 border-[#e5c158] bg-black shadow-2xl p-1">
-            <div id="continuous-qr-reader" className="w-full h-64 sm:h-72 bg-black rounded-2xl overflow-hidden"></div>
+            <div id="continuous-qr-reader" className="w-full min-h-[380px] sm:min-h-[460px] bg-black rounded-2xl overflow-hidden flex items-center justify-center"></div>
             
             {/* Guide overlay */}
             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
-              <div className="w-48 h-48 border-2 border-dashed border-[#e5c158]/70 rounded-2xl animate-pulse"></div>
+              <div className="w-64 h-64 sm:w-72 sm:h-72 border-2 border-dashed border-[#e5c158] rounded-3xl animate-pulse shadow-2xl"></div>
               <p className="text-[11px] font-bold text-white bg-black/60 px-3 py-1 rounded-full mt-2 backdrop-blur-sm">
                 Aim at participant's QR code
               </p>
