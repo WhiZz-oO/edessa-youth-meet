@@ -55,10 +55,9 @@ export default function Registration() {
       screenshotName: '',
     };
 
-    // Dual-Channel Submission to Google Sheets
+    // Single Clean Submission to Google Sheets (Prevents Duplicate Entries)
     if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
       try {
-        // Channel 1: standard no-cors fetch
         await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
           method: 'POST',
           mode: 'no-cors',
@@ -68,40 +67,7 @@ export default function Registration() {
           body: JSON.stringify(newEntry),
         });
       } catch (err) {
-        console.warn('Direct fetch warning:', err);
-      }
-
-      // Channel 2: Background hidden form submit (100% bypasses CORS & ad-blockers)
-      try {
-        const iframeName = 'sheets_hidden_iframe_' + Date.now();
-        let iframe = document.createElement('iframe');
-        iframe.name = iframeName;
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = GOOGLE_SHEETS_CONFIG.webAppUrl;
-        form.target = iframeName;
-        form.style.display = 'none';
-
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'data';
-        input.value = JSON.stringify(newEntry);
-        form.appendChild(input);
-
-        document.body.appendChild(form);
-        form.submit();
-
-        setTimeout(() => {
-          try {
-            document.body.removeChild(form);
-            document.body.removeChild(iframe);
-          } catch (e) {}
-        }, 5000);
-      } catch (err) {
-        console.warn('Iframe fallback warning:', err);
+        console.error('Google Sheets submission error:', err);
       }
     }
 
