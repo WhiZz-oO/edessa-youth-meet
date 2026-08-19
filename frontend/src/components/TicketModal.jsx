@@ -1,14 +1,34 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { X, CheckCircle, Cross, Sparkles, MapPin, Calendar, Banknote, Download, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import QRCode from 'qrcode';
 
 export default function TicketModal({ ticketData, onClose }) {
   const ticketRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
 
   if (!ticketData) return null;
 
   const isCash = ticketData.paymentMode === 'Spot Cash' || ticketData.paymentMode === 'cash';
+
+  useEffect(() => {
+    if (ticketData?.ticketId) {
+      // Build unique check-in payload URL encoded in the QR code
+      const checkinUrl = `https://edessa-youth-meet.vercel.app/?checkin=${encodeURIComponent(ticketData.ticketId)}&name=${encodeURIComponent(ticketData.fullName || '')}&ward=${encodeURIComponent(ticketData.parish || '')}&house=${encodeURIComponent(ticketData.houseName || '')}&phone=${encodeURIComponent(ticketData.phone || '')}&pay=${isCash ? 'cash' : 'online'}`;
+
+      QRCode.toDataURL(checkinUrl, {
+        width: 320,
+        margin: 1,
+        color: {
+          dark: '#150d09',
+          light: '#ffffff',
+        },
+      })
+        .then((url) => setQrDataUrl(url))
+        .catch((err) => console.error('QR generation error:', err));
+    }
+  }, [ticketData, isCash]);
 
   const handleDownloadPng = async () => {
     if (!ticketRef.current) return;
@@ -30,7 +50,6 @@ export default function TicketModal({ ticketData, onClose }) {
       document.body.removeChild(link);
     } catch (err) {
       console.error('Failed to generate PNG:', err);
-      // Fallback if canvas is tainted
       window.print();
     } finally {
       setIsDownloading(false);
@@ -122,7 +141,7 @@ export default function TicketModal({ ticketData, onClose }) {
             </div>
           </div>
 
-          {/* Venue Details & Gate Pass */}
+          {/* Venue Details & Real Unique Gate Pass QR Code */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#231610] border border-[#d4af37]/20">
             
             <div className="space-y-1 text-center sm:text-left text-xs">
@@ -143,30 +162,21 @@ export default function TicketModal({ ticketData, onClose }) {
               </p>
             </div>
 
-            {/* Styled Gate Pass Graphic */}
-            <div className="p-2 bg-white rounded-xl shadow-md border border-[#e5c158] flex flex-col items-center flex-shrink-0">
-              <svg className="w-16 h-16" viewBox="0 0 100 100">
-                <rect width="100" height="100" fill="#ffffff" />
-                <rect x="10" y="10" width="25" height="25" fill="#150d09" />
-                <rect x="15" y="15" width="15" height="15" fill="#ffffff" />
-                <rect x="18" y="18" width="9" height="9" fill="#d96b27" />
-                
-                <rect x="65" y="10" width="25" height="25" fill="#150d09" />
-                <rect x="70" y="15" width="15" height="15" fill="#ffffff" />
-                <rect x="73" y="18" width="9" height="9" fill="#d96b27" />
-                
-                <rect x="10" y="65" width="25" height="25" fill="#150d09" />
-                <rect x="15" y="70" width="15" height="15" fill="#ffffff" />
-                <rect x="18" y="73" width="9" height="9" fill="#d96b27" />
-                
-                <rect x="45" y="45" width="10" height="10" fill="#150d09" />
-                <rect x="60" y="60" width="15" height="15" fill="#d96b27" />
-                <rect x="75" y="75" width="10" height="10" fill="#150d09" />
-                <rect x="45" y="75" width="12" height="12" fill="#d4af37" />
-                <rect x="75" y="45" width="12" height="12" fill="#150d09" />
-              </svg>
-              <span className="text-[7px] font-mono font-bold text-[#150d09] uppercase tracking-wider mt-0.5">
-                GATE PASS
+            {/* Real Unique Scannable QR Code */}
+            <div className="p-2 bg-white rounded-2xl shadow-xl border-2 border-[#e5c158] flex flex-col items-center flex-shrink-0">
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt={`QR Check-in Pass for ${ticketData.ticketId}`}
+                  className="w-24 h-24 object-contain rounded-lg"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#d96b27]" />
+                </div>
+              )}
+              <span className="text-[8px] font-mono font-black text-[#150d09] uppercase tracking-widest mt-1">
+                SCAN FOR CHECK-IN
               </span>
             </div>
 
