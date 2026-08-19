@@ -15,7 +15,7 @@ export default function TicketModal({ ticketData, onClose }) {
   useEffect(() => {
     if (ticketData?.ticketId) {
       // Build unique check-in payload URL encoded in the QR code
-      const qrPayload = String(ticketData.ticketId || '').trim();
+      const qrPayload = `${ticketData.ticketId || ''}|${ticketData.fullName || ''}|${ticketData.parish || ''}|${ticketData.houseName || ''}|${ticketData.phone || ''}|${isCash ? 'cash' : 'online'}`;
       QRCode.toDataURL(qrPayload, {
         width: 320,
         margin: 1,

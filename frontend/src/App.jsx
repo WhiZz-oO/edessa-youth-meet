@@ -10,9 +10,11 @@ import Registration from './components/Registration';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import TicketModal from './components/TicketModal';
+import ContinuousScanner from './components/ContinuousScanner';
 
 export default function App() {
   const [directTicket, setDirectTicket] = useState(null);
+  const [isAdminScannerOpen, setIsAdminScannerOpen] = useState(false);
 
   const scrollToRegister = () => {
     const el = document.getElementById('register');
@@ -23,8 +25,16 @@ export default function App() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
 
-    // Check for Direct Ticket Pass view parameter
+    // 1. Check for Secret Admin Continuous Scanner URL (?admin=2026 or #admin2026)
+    const adminKey = urlParams.get('admin') || urlParams.get('scanner') || urlParams.get('desk');
+    if (adminKey === '2026' || adminKey === 'smym' || hash === '#admin2026' || hash === '#scanner') {
+      setIsAdminScannerOpen(true);
+      return;
+    }
+
+    // 2. Check for Direct Ticket Pass view parameter
     const ticketId = urlParams.get('ticket') || urlParams.get('pass') || urlParams.get('id');
     if (ticketId) {
       const name = urlParams.get('name');
@@ -100,6 +110,13 @@ export default function App() {
         <TicketModal
           ticketData={directTicket}
           onClose={() => setDirectTicket(null)}
+        />
+      )}
+
+      {/* Secret Continuous Volunteer Scanner Desk */}
+      {isAdminScannerOpen && (
+        <ContinuousScanner
+          onClose={() => setIsAdminScannerOpen(false)}
         />
       )}
     </div>
