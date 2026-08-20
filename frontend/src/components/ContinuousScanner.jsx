@@ -298,90 +298,84 @@ export default function ContinuousScanner({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-[#0d0705] text-white flex flex-col overflow-y-auto font-sans">
       
-      {/* 1. Header Bar */}
-      <header className="sticky top-0 z-40 bg-[#1c120c]/95 backdrop-blur-md border-b border-[#d4af37]/30 px-3.5 sm:px-6 py-2.5 flex items-center justify-between shadow-xl flex-shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-orange-gradient flex items-center justify-center font-bold text-white shadow-md">
-            <Zap className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="font-cinzel text-sm sm:text-base font-bold text-gold-gradient tracking-wide">
-              EDESSA 2026 • Registration Desk
-            </h2>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="text-green-400 font-semibold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+      {/* 1. Header Bar (Clean, 100% Mobile Responsive, Never Overflows) */}
+      <header className="sticky top-0 z-40 bg-[#1c120c]/95 backdrop-blur-md border-b border-[#d4af37]/30 px-3 sm:px-6 py-2 shadow-xl flex-shrink-0">
+        <div className="flex items-center justify-between gap-2 max-w-7xl mx-auto">
+          
+          {/* Brand Logo & Name */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-gradient flex items-center justify-center font-bold text-white shadow-md flex-shrink-0">
+              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-cinzel text-xs sm:text-base font-bold text-gold-gradient tracking-wide truncate">
+                EDESSA 2026
+              </h2>
+              <span className="text-green-400 font-semibold text-[9px] sm:text-[10px] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
                 Cloud Synced
               </span>
-              {lastSyncTime && <span className="text-[#f4ece1]/50 hidden sm:inline">• Synced {lastSyncTime}</span>}
             </div>
           </div>
-        </div>
 
-        {/* Top Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          
-          {/* Volunteer Toggle */}
-          <div className="flex items-center bg-[#140b07] p-1 rounded-xl border border-[#d4af37]/30 text-xs">
-            <span className="text-[10px] text-[#f4ece1]/60 px-1.5 hidden md:inline">Operating Desk:</span>
-            {VOLUNTEERS.map(v => (
-              <button
-                key={v.id}
-                onClick={() => handleVolunteerChange(v.name)}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all text-xs cursor-pointer ${
-                  activeVolunteer === v.name
-                    ? 'bg-orange-gradient text-white shadow-md'
-                    : 'text-[#f4ece1]/70 hover:text-white'
-                }`}
-              >
-                {v.name.split(' ')[0]}
-              </button>
-            ))}
+          {/* Right Action Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            
+            {/* Volunteer Switcher */}
+            <div className="flex items-center bg-[#140b07] p-0.5 sm:p-1 rounded-xl border border-[#d4af37]/30 text-xs">
+              {VOLUNTEERS.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => handleVolunteerChange(v.name)}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg font-bold transition-all text-[11px] sm:text-xs cursor-pointer ${
+                    activeVolunteer === v.name
+                      ? 'bg-orange-gradient text-white shadow-md'
+                      : 'text-[#f4ece1]/70 hover:text-white'
+                  }`}
+                >
+                  {v.name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+
+            {/* View Switch Button */}
+            <button
+              onClick={() => setViewTab(viewTab === 'desk' ? 'admin' : 'desk')}
+              className="px-2.5 py-1.5 rounded-xl bg-[#2a1a12] border border-[#d4af37]/40 text-[#e5c158] hover:bg-[#3d2417] text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            >
+              {viewTab === 'desk' ? (
+                <>
+                  <Award className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Admin Report</span>
+                  <span className="sm:hidden">Report</span>
+                </>
+              ) : (
+                <>
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Desk</span>
+                </>
+              )}
+            </button>
+
+            {/* Manual Refresh */}
+            <button
+              onClick={fetchLiveSheetData}
+              disabled={isLoadingSheet}
+              className="p-1.5 sm:p-2 rounded-xl bg-[#2a1a12] border border-[#d4af37]/30 text-[#e5c158] hover:bg-[#3d2417] text-xs font-bold transition-all cursor-pointer"
+              title="Refresh from Google Sheets"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isLoadingSheet ? 'animate-spin text-[#d96b27]' : ''}`} />
+            </button>
+
+            {/* Close */}
+            <button
+              onClick={onClose}
+              className="p-1.5 sm:p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
           </div>
 
-          {/* View Tab Switch */}
-          <div className="flex bg-[#140b07] p-1 rounded-xl border border-[#d4af37]/30 text-xs">
-            <button
-              onClick={() => setViewTab('desk')}
-              className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer ${
-                viewTab === 'desk'
-                  ? 'bg-[#d96b27] text-white shadow-md'
-                  : 'text-[#f4ece1]/70 hover:text-white'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Desk</span>
-            </button>
-            <button
-              onClick={() => setViewTab('admin')}
-              className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer ${
-                viewTab === 'admin'
-                  ? 'bg-[#d96b27] text-white shadow-md'
-                  : 'text-[#f4ece1]/70 hover:text-white'
-              }`}
-            >
-              <Award className="w-3.5 h-3.5" />
-              <span>Admin Report</span>
-            </button>
-          </div>
-
-          {/* Manual Refresh Button */}
-          <button
-            onClick={fetchLiveSheetData}
-            disabled={isLoadingSheet}
-            className="p-2 rounded-xl bg-[#2a1a12] border border-[#d4af37]/30 text-[#e5c158] hover:bg-[#3d2417] text-xs font-bold transition-all cursor-pointer"
-            title="Refresh from Google Sheets"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoadingSheet ? 'animate-spin text-[#d96b27]' : ''}`} />
-          </button>
-
-          {/* Close Desk */}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
       </header>
 
@@ -409,55 +403,61 @@ export default function ContinuousScanner({ onClose }) {
             </div>
           </div>
 
-          {/* Key Financial & Attendance Stats Cards with UPI Online Breakdown */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* 5 Distinct Dedicated Stat Boxes (Total, Cash in Hand, UPI Online, Dona George Box, Neha Miriam Box) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
             
-            {/* 1. Total Present */}
-            <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between shadow-lg">
+            {/* Box 1: Total Admitted */}
+            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between shadow-lg">
               <div>
                 <p className="text-[10px] font-bold uppercase text-[#e5c158]">Total Admitted</p>
-                <p className="text-2xl font-black text-white">{totalPresent} <span className="text-xs text-gray-400 font-normal">/ {totalRegistered}</span></p>
-                <p className="text-[10px] text-green-400 font-semibold">₹{grandTotalRevenue} Total Value</p>
+                <p className="text-xl sm:text-2xl font-black text-white">{totalPresent} <span className="text-xs text-gray-400 font-normal">/ {totalRegistered}</span></p>
+                <p className="text-[10px] text-green-400 font-semibold">₹{grandTotalRevenue} Total</p>
               </div>
-              <Users className="w-6 h-6 text-[#e5c158]" />
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-[#e5c158] flex-shrink-0" />
             </div>
 
-            {/* 2. Physical Cash in Hand */}
-            <div className="bg-[#1c120c] p-3.5 rounded-2xl border-2 border-amber-500/40 flex items-center justify-between shadow-lg">
+            {/* Box 2: Physical Cash in Hand */}
+            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border-2 border-amber-500/40 flex items-center justify-between shadow-lg">
               <div>
                 <p className="text-[10px] font-bold uppercase text-amber-300 flex items-center gap-1">
-                  <Banknote className="w-3.5 h-3.5" /> Cash In Hand
+                  <Banknote className="w-3 h-3" /> Cash in Hand
                 </p>
-                <p className="text-2xl font-black text-amber-400">₹{totalPhysicalCashInHand}</p>
+                <p className="text-xl sm:text-2xl font-black text-amber-400">₹{totalPhysicalCashInHand}</p>
                 <p className="text-[10px] text-amber-200/80">{presentCashDelegates.length} cash delegates</p>
               </div>
-              <Banknote className="w-6 h-6 text-amber-400" />
+              <Banknote className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 flex-shrink-0" />
             </div>
 
-            {/* 3. UPI Online in Bank */}
-            <div className="bg-[#1c120c] p-3.5 rounded-2xl border-2 border-blue-500/40 flex items-center justify-between shadow-lg">
+            {/* Box 3: UPI Online Received */}
+            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border-2 border-blue-500/40 flex items-center justify-between shadow-lg">
               <div>
                 <p className="text-[10px] font-bold uppercase text-blue-400 flex items-center gap-1">
-                  <Smartphone className="w-3.5 h-3.5" /> UPI Received
+                  <Smartphone className="w-3 h-3" /> UPI Received
                 </p>
-                <p className="text-2xl font-black text-blue-400">₹{totalUpiPaidInBank}</p>
+                <p className="text-xl sm:text-2xl font-black text-blue-400">₹{totalUpiPaidInBank}</p>
                 <p className="text-[10px] text-blue-200/80">{presentUpiDelegates.length} online delegates</p>
               </div>
-              <Smartphone className="w-6 h-6 text-blue-400" />
+              <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 flex-shrink-0" />
             </div>
 
-            {/* 4. Volunteer Breakdown Combined */}
-            <div className="bg-[#1c120c] p-3 rounded-2xl border border-[#d4af37]/30 flex flex-col justify-between shadow-lg text-xs space-y-1">
-              <div className="flex justify-between items-center border-b border-[#382015] pb-1">
-                <span className="text-[10px] text-blue-400 font-bold">👩 Dona</span>
-                <span className="font-bold text-amber-300">₹{donaPhysicalCash} Cash</span>
-                <span className="text-[10px] text-blue-300 font-semibold">₹{donaUpiCash} UPI</span>
+            {/* Box 4: Dedicated Dona George Box */}
+            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border-2 border-blue-500/40 flex items-center justify-between shadow-lg">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-blue-400">👩 Dona George</p>
+                <p className="text-xl sm:text-2xl font-black text-amber-300">₹{donaPhysicalCash} <span className="text-[10px] text-[#f4ece1]/70 font-normal">Cash</span></p>
+                <p className="text-[10px] text-blue-300 font-semibold">{donaCheckins.length} admitted • ₹{donaUpiCash} UPI</p>
               </div>
-              <div className="flex justify-between items-center pt-0.5">
-                <span className="text-[10px] text-purple-400 font-bold">👩 Neha</span>
-                <span className="font-bold text-amber-300">₹{nehaPhysicalCash} Cash</span>
-                <span className="text-[10px] text-purple-300 font-semibold">₹{nehaUpiCash} UPI</span>
+              <User className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 flex-shrink-0" />
+            </div>
+
+            {/* Box 5: Dedicated Neha Miriam Jose Box */}
+            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border-2 border-purple-500/40 flex items-center justify-between shadow-lg col-span-2 sm:col-span-1">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-purple-400">👩 Neha Miriam</p>
+                <p className="text-xl sm:text-2xl font-black text-amber-300">₹{nehaPhysicalCash} <span className="text-[10px] text-[#f4ece1]/70 font-normal">Cash</span></p>
+                <p className="text-[10px] text-purple-300 font-semibold">{nehaCheckins.length} admitted • ₹{nehaUpiCash} UPI</p>
               </div>
+              <User className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400 flex-shrink-0" />
             </div>
 
           </div>
