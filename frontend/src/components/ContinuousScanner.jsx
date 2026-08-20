@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
 import { 
-  CheckCircle2, AlertTriangle, Camera, X, Volume2, VolumeX, 
+  CheckCircle2, AlertTriangle, X, Volume2, VolumeX, 
   Users, Banknote, Search, RefreshCw, Sparkles, ShieldCheck, Zap,
-  UserCheck, Award, Lock, ArrowRight, User
+  UserCheck, Award, Lock, ArrowRight, User, Phone, Home, MapPin,
+  Clock, Filter, ChevronDown, Check, UserPlus
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GOOGLE_SHEETS_CONFIG } from '../data/googleSheetsConfig';
@@ -18,32 +18,28 @@ export default function ContinuousScanner({ onClose }) {
     return localStorage.getItem('edessa_active_volunteer') || 'Dona George';
   });
 
-  const [viewTab, setViewTab] = useState('scanner'); // 'scanner' | 'admin'
+  const [viewTab, setViewTab] = useState('desk'); // 'desk' | 'admin'
   const [allDelegates, setAllDelegates] = useState([]);
   const [isLoadingSheet, setIsLoadingSheet] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState('');
 
   // Active Popup Modal State
-  const [activeModalData, setActiveModalData] = useState(null);
+  const [selectedDelegate, setSelectedDelegate] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalType, setModalType] = useState(null); // 'confirm_cash' | 'confirm_online' | 'locked_duplicate' | 'success_done'
+  const [modalState, setModalState] = useState(null); // 'confirm' | 'locked' | 'success'
 
-  const [cameraError, setCameraError] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [adminFilter, setAdminFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'present' | 'dona' | 'neha'
+  const [selectedWard, setSelectedWard] = useState('all');
 
-  const scannerRef = useRef(null);
-  const lastScannedCodeRef = useRef('');
-  const lastScannedTimeRef = useRef(0);
   const allDelegatesRef = useRef([]);
 
-  // Keep ref synchronized with state for real-time scanner check
   useEffect(() => {
     allDelegatesRef.current = allDelegates;
   }, [allDelegates]);
 
-  // 1. Fetch Live Master Database from Google Sheet
+  // 1. Fetch Master Live Database from Google Sheet
   const fetchLiveSheetData = async () => {
     setIsLoadingSheet(true);
     const sheetGvizUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:json&t=${Date.now()}`;
@@ -156,136 +152,21 @@ export default function ContinuousScanner({ onClose }) {
     } catch (e) {}
   };
 
-  // Continuous Camera Scanner Setup
-  useEffect(() => {
-    if (viewTab !== 'scanner') return;
-
-    let html5QrCode = null;
-
-    const startScanner = async () => {
-      try {
-        html5QrCode = new Html5Qrcode('continuous-qr-reader');
-        scannerRef.current = html5QrCode;
-
-        const config = {
-          fps: 20,
-          qrbox: (viewfinderWidth, viewfinderHeight) => {
-            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const edgeSize = Math.floor(minEdge * 0.85);
-            return {
-              width: Math.max(260, edgeSize),
-              height: Math.max(260, edgeSize)
-            };
-          },
-        };
-
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          config,
-          handleScanSuccess,
-          () => {}
-        );
-      } catch (err) {
-        console.error('Camera start error:', err);
-        setCameraError('Camera access required. Please allow camera permissions in browser.');
-      }
-    };
-
-    startScanner();
-
-    return () => {
-      if (scannerRef.current) {
-        try {
-          scannerRef.current.stop().catch(() => {});
-        } catch (e) {}
-      }
-    };
-  }, [viewTab]);
-
-  const handleScanSuccess = (decodedText) => {
-    const now = Date.now();
-    // Debounce scan of same QR within 3 seconds
-    if (decodedText === lastScannedCodeRef.current && now - lastScannedTimeRef.current < 3000) {
-      return;
-    }
-    lastScannedCodeRef.current = decodedText;
-    lastScannedTimeRef.current = now;
-
-    processScannedCode(decodedText);
-  };
-
-  const processScannedCode = (codeText) => {
-    let ticketId = '';
-    let fullName = '';
-    let parish = '';
-    let houseName = '';
-    let phone = '';
-    let paymentMode = 'Spot Cash';
-
-    if (codeText.includes('|')) {
-      const parts = codeText.split('|');
-      ticketId = parts[0] ? parts[0].trim() : '';
-      fullName = parts[1] ? parts[1].trim() : '';
-      parish = parts[2] ? parts[2].trim() : '';
-      houseName = parts[3] ? parts[3].trim() : '';
-      phone = parts[4] ? parts[4].trim() : '';
-      paymentMode = parts[5] === 'online' ? 'Google Pay (UPI)' : 'Spot Cash';
-    } else if (codeText.includes('ticket=') || codeText.includes('checkin=')) {
-      try {
-        const url = new URL(codeText);
-        const params = new URLSearchParams(url.search);
-        ticketId = params.get('ticket') || params.get('checkin') || '';
-        fullName = params.get('name') || '';
-        houseName = params.get('house') || '';
-        parish = params.get('ward') || '';
-        phone = params.get('phone') || '';
-        paymentMode = params.get('pay') === 'online' ? 'Google Pay (UPI)' : 'Spot Cash';
-      } catch (e) {
-        ticketId = codeText.trim();
-      }
-    } else {
-      ticketId = codeText.trim();
-    }
-
-    // Lookup in fresh delegates list
-    const currentList = allDelegatesRef.current.length > 0 ? allDelegatesRef.current : allDelegates;
-    const matched = currentList.find(d => 
-      (ticketId && d.ticketId.toUpperCase() === ticketId.toUpperCase()) ||
-      (fullName && d.fullName.toLowerCase() === fullName.toLowerCase())
-    );
-
-    const delegate = matched || {
-      ticketId: ticketId || 'EDESSA-PASS',
-      fullName: fullName || 'Delegate',
-      houseName: houseName || '—',
-      parish: parish || 'Ward',
-      phone: phone || '—',
-      paymentMode: paymentMode,
-      isCash: paymentMode === 'Spot Cash',
-      isPresent: false,
-    };
-
-    setActiveModalData(delegate);
-
-    // CRITICAL: STRICT LOCK CHECK
+  // Open Pop-up Modal when clicking a participant
+  const handleOpenCheckinModal = (delegate) => {
+    setSelectedDelegate(delegate);
     if (delegate.isPresent) {
-      // PLAY WARNING TONE & SHOW RED LOCKED POPUP
       playBeep(false);
-      setModalType('locked_duplicate');
+      setModalState('locked');
     } else {
-      // PLAY SUCCESS BEEP & SHOW FEE CONFIRMATION POPUP
       playBeep(true);
-      if (delegate.isCash) {
-        setModalType('confirm_cash');
-      } else {
-        setModalType('confirm_online');
-      }
+      setModalState('confirm');
     }
   };
 
   // Confirm Check-in & Record in Cloud
   const handleConfirmCheckin = async () => {
-    if (!activeModalData) return;
+    if (!selectedDelegate) return;
     setIsSubmitting(true);
 
     const checkinTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -293,7 +174,7 @@ export default function ContinuousScanner({ onClose }) {
 
     // Optimistic UI update
     setAllDelegates(prev => prev.map(d => {
-      if (d.ticketId === activeModalData.ticketId) {
+      if (d.ticketId === selectedDelegate.ticketId) {
         return {
           ...d,
           isPresent: true,
@@ -305,8 +186,8 @@ export default function ContinuousScanner({ onClose }) {
       return d;
     }));
 
-    setModalType('success_done');
-    setActiveModalData(prev => ({
+    setModalState('success');
+    setSelectedDelegate(prev => ({
       ...prev,
       isPresent: true,
       checkedInBy: activeVolunteer,
@@ -314,8 +195,8 @@ export default function ContinuousScanner({ onClose }) {
     }));
 
     confetti({
-      particleCount: 70,
-      spread: 60,
+      particleCount: 75,
+      spread: 65,
       origin: { y: 0.5 },
     });
 
@@ -328,8 +209,8 @@ export default function ContinuousScanner({ onClose }) {
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
             action: 'checkin',
-            ticketId: activeModalData.ticketId,
-            fullName: activeModalData.fullName,
+            ticketId: selectedDelegate.ticketId,
+            fullName: selectedDelegate.fullName,
             time: formattedAttendance,
           }),
         });
@@ -340,70 +221,62 @@ export default function ContinuousScanner({ onClose }) {
 
     setIsSubmitting(false);
 
-    // Auto close success popup after 1.8 seconds to ready next scan
+    // Auto-close success modal after 1.6 seconds
     setTimeout(() => {
-      setActiveModalData(null);
-      setModalType(null);
+      setSelectedDelegate(null);
+      setModalState(null);
       fetchLiveSheetData();
-    }, 1800);
+    }, 1600);
   };
 
   const handleCloseModal = () => {
-    setActiveModalData(null);
-    setModalType(null);
+    setSelectedDelegate(null);
+    setModalState(null);
   };
 
-  const handleManualSearchCheckin = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    
-    const q = searchQuery.trim().toLowerCase();
-    const matched = allDelegates.find(d => 
-      d.ticketId.toLowerCase().includes(q) ||
-      d.fullName.toLowerCase().includes(q) ||
-      d.phone.includes(q)
-    );
+  // Unique Ward List
+  const wardList = Array.from(new Set(allDelegates.map(d => d.parish).filter(Boolean))).sort();
 
-    if (matched) {
-      processScannedCode(matched.ticketId);
-    } else {
-      processScannedCode(searchQuery.trim());
+  // Filtered Delegates for Desk View
+  const filteredList = allDelegates.filter(item => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchSearch = !q || 
+      item.fullName.toLowerCase().includes(q) ||
+      item.ticketId.toLowerCase().includes(q) ||
+      item.parish.toLowerCase().includes(q) ||
+      item.houseName.toLowerCase().includes(q) ||
+      item.phone.includes(q);
+
+    if (!matchSearch) return false;
+
+    if (selectedWard !== 'all' && item.parish !== selectedWard) return false;
+
+    if (statusFilter === 'pending') return !item.isPresent;
+    if (statusFilter === 'present') return item.isPresent;
+    if (statusFilter === 'dona') return item.isPresent && item.checkedInBy?.includes('Dona');
+    if (statusFilter === 'neha') return item.isPresent && item.checkedInBy?.includes('Neha');
+    return true;
+  });
+
+  // Sort: Pending arrivals first, then alphabetical
+  const sortedList = [...filteredList].sort((a, b) => {
+    if (a.isPresent === b.isPresent) {
+      return a.fullName.localeCompare(b.fullName);
     }
-    setSearchQuery('');
-  };
+    return a.isPresent ? 1 : -1;
+  });
 
-  // Super Admin Analytics
+  // Analytics
   const totalRegistered = allDelegates.length;
   const totalPresent = allDelegates.filter(d => d.isPresent).length;
   const totalPending = totalRegistered - totalPresent;
   const totalCashCollected = allDelegates.filter(d => d.isPresent && d.isCash).length * 150;
-  const totalOnlinePaid = allDelegates.filter(d => d.isPresent && !d.isCash).length;
 
-  const donaCheckins = allDelegates.filter(d => d.isPresent && (d.checkedInBy === 'Dona George' || d.checkedInBy === 'Dona'));
+  const donaCheckins = allDelegates.filter(d => d.isPresent && (d.checkedInBy?.includes('Dona')));
   const donaCash = donaCheckins.filter(d => d.isCash).length * 150;
 
-  const nehaCheckins = allDelegates.filter(d => d.isPresent && (d.checkedInBy === 'Neha Miriam Jose' || d.checkedInBy === 'Neha'));
+  const nehaCheckins = allDelegates.filter(d => d.isPresent && (d.checkedInBy?.includes('Neha')));
   const nehaCash = nehaCheckins.filter(d => d.isCash).length * 150;
-
-  const otherCheckins = allDelegates.filter(d => d.isPresent && !d.checkedInBy?.includes('Dona') && !d.checkedInBy?.includes('Neha'));
-  const otherCash = otherCheckins.filter(d => d.isCash).length * 150;
-
-  const adminFilteredList = allDelegates.filter(item => {
-    const matchSearch = 
-      item.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.ticketId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.parish.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.houseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.phone.includes(searchQuery);
-
-    if (!matchSearch) return false;
-
-    if (adminFilter === 'present') return item.isPresent;
-    if (adminFilter === 'pending') return !item.isPresent;
-    if (adminFilter === 'dona') return item.isPresent && item.checkedInBy?.includes('Dona');
-    if (adminFilter === 'neha') return item.isPresent && item.checkedInBy?.includes('Neha');
-    return true;
-  });
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0d0705] text-white flex flex-col overflow-y-auto font-sans">
@@ -416,7 +289,7 @@ export default function ContinuousScanner({ onClose }) {
           </div>
           <div>
             <h2 className="font-cinzel text-sm sm:text-base font-bold text-gold-gradient tracking-wide">
-              EDESSA 2026 • Scanner Desk
+              EDESSA 2026 • Registration Desk
             </h2>
             <div className="flex items-center gap-2 text-[10px]">
               <span className="text-green-400 font-semibold flex items-center gap-1">
@@ -428,12 +301,12 @@ export default function ContinuousScanner({ onClose }) {
           </div>
         </div>
 
-        {/* Volunteer Switcher & Navigation Tabs */}
+        {/* Top Controls: Volunteer Switcher & Admin Report */}
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* Volunteer Toggle Buttons */}
+          {/* Volunteer Toggle */}
           <div className="flex items-center bg-[#140b07] p-1 rounded-xl border border-[#d4af37]/30 text-xs">
-            <span className="text-[10px] text-[#f4ece1]/60 px-1.5 hidden md:inline">Desk:</span>
+            <span className="text-[10px] text-[#f4ece1]/60 px-1.5 hidden md:inline">Operating Desk:</span>
             {VOLUNTEERS.map(v => (
               <button
                 key={v.id}
@@ -452,15 +325,15 @@ export default function ContinuousScanner({ onClose }) {
           {/* View Tab Switch */}
           <div className="flex bg-[#140b07] p-1 rounded-xl border border-[#d4af37]/30 text-xs">
             <button
-              onClick={() => setViewTab('scanner')}
+              onClick={() => setViewTab('desk')}
               className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer ${
-                viewTab === 'scanner'
+                viewTab === 'desk'
                   ? 'bg-[#d96b27] text-white shadow-md'
                   : 'text-[#f4ece1]/70 hover:text-white'
               }`}
             >
-              <Camera className="w-3.5 h-3.5" />
-              <span>Scan</span>
+              <Users className="w-3.5 h-3.5" />
+              <span>Desk</span>
             </button>
             <button
               onClick={() => setViewTab('admin')}
@@ -495,158 +368,241 @@ export default function ContinuousScanner({ onClose }) {
         </div>
       </header>
 
-      {/* 2. SCANNER DESK VIEW (Clean, Uncongested Layout) */}
-      {viewTab === 'scanner' && (
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12">
+      {/* 2. REGISTRATION DESK VIEW (Participant List & 1-Tap Check-In) */}
+      {viewTab === 'desk' && (
+        <div className="flex-1 p-3.5 sm:p-6 max-w-7xl mx-auto w-full space-y-4">
           
-          {/* Left Column: Full-Height Clean Camera & Quick Search */}
-          <div className="lg:col-span-6 p-3.5 sm:p-6 flex flex-col space-y-3 sm:space-y-4 border-b lg:border-b-0 lg:border-r border-[#382015]">
-            
-            {/* Active Volunteer Banner */}
-            <div className="p-2.5 px-4 rounded-2xl bg-[#1c120c] border border-[#d4af37]/30 flex items-center justify-between text-xs flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-[#e5c158]" />
-                <span>Operating Desk: <strong className="text-[#e5c158]">{activeVolunteer}</strong></span>
+          {/* Active Operating Desk Info Banner */}
+          <div className="p-3 px-4 rounded-2xl bg-[#1c120c] border border-[#d4af37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-full bg-[#d96b27]/20 border border-[#d96b27] flex items-center justify-center text-[#e5c158]">
+                <User className="w-3.5 h-3.5" />
               </div>
-              <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-2.5 py-0.5 rounded-full border border-green-500/30 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping"></span>
-                Scanner Live
+              <div>
+                <span>Operating Desk: <strong className="text-[#e5c158] text-sm">{activeVolunteer}</strong></span>
+                <p className="text-[10px] text-[#f4ece1]/60">Select participant below to collect ₹150 fee &amp; confirm attendance</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-green-400 font-bold bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/30 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                {totalPresent} of {totalRegistered} Present
               </span>
             </div>
+          </div>
 
-            {/* Rigid Large Non-Shrinking Camera Viewfinder */}
-            <div className="relative rounded-3xl overflow-hidden border-2 border-[#e5c158] bg-black shadow-2xl p-1 flex-shrink-0 w-full h-[280px] sm:h-[380px]">
-              <div id="continuous-qr-reader" className="w-full h-full bg-black rounded-2xl overflow-hidden flex items-center justify-center"></div>
-              
-              {/* Guide Overlay */}
-              <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
-                <div className="w-60 h-60 sm:w-68 sm:h-68 border-2 border-dashed border-[#e5c158] rounded-3xl animate-pulse shadow-2xl"></div>
-                <p className="text-[11px] font-bold text-white bg-black/75 px-4 py-1.5 rounded-full mt-3 backdrop-blur-md border border-[#e5c158]/30">
-                  Aim at participant's QR code
-                </p>
+          {/* Live Stats Bar */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-[#e5c158]">Total Present</p>
+                <p className="text-2xl font-black text-white">{totalPresent} <span className="text-xs text-gray-400 font-normal">/ {totalRegistered}</span></p>
               </div>
+              <Users className="w-6 h-6 text-[#e5c158]" />
             </div>
 
-            {cameraError && (
-              <div className="p-3.5 rounded-2xl bg-red-500/20 border border-red-500 text-red-200 text-xs text-center font-medium flex-shrink-0">
-                {cameraError}
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-amber-500/30 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-amber-300">Spot Cash Collected</p>
+                <p className="text-2xl font-black text-amber-400">₹{totalCashCollected}</p>
               </div>
-            )}
+              <Banknote className="w-6 h-6 text-amber-400" />
+            </div>
 
-            {/* Quick Manual Search Input */}
-            <form onSubmit={handleManualSearchCheckin} className="flex gap-2 flex-shrink-0 pt-1">
+            <div className="bg-[#1c120c] p-3 rounded-2xl border border-blue-500/30">
+              <p className="text-[10px] text-blue-400 font-bold uppercase">👩 Dona George</p>
+              <p className="text-lg font-black text-white mt-0.5">{donaCheckins.length} Present • <span className="text-amber-300">₹{donaCash}</span></p>
+            </div>
+
+            <div className="bg-[#1c120c] p-3 rounded-2xl border border-purple-500/30">
+              <p className="text-[10px] text-purple-400 font-bold uppercase">👩 Neha Miriam</p>
+              <p className="text-lg font-black text-white mt-0.5">{nehaCheckins.length} Present • <span className="text-amber-300">₹{nehaCash}</span></p>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              
+              {/* Main Search Input */}
               <div className="relative flex-1">
-                <Search className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3" />
+                <Search className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3.5" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Or type Name / Ticket ID / Phone"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1c120c] border border-[#d4af37]/40 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-[#d96b27]"
+                  placeholder="Search by Name, House Name, Ward, or Phone..."
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#140b07] border border-[#d4af37]/40 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#d96b27]"
                 />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl bg-orange-gradient text-white font-bold text-xs shadow-md border border-[#e5c158]/50 active:scale-95 transition-all cursor-pointer"
-              >
-                Find &amp; Check In
-              </button>
-            </form>
 
+              {/* Ward Selector Dropdown */}
+              <div className="sm:w-48">
+                <select
+                  value={selectedWard}
+                  onChange={(e) => setSelectedWard(e.target.value)}
+                  className="w-full py-3 px-3 rounded-xl bg-[#140b07] border border-[#d4af37]/40 text-white text-xs font-bold focus:outline-none focus:border-[#d96b27] cursor-pointer"
+                >
+                  <option value="all">All Wards ({allDelegates.length})</option>
+                  {wardList.map((w, idx) => {
+                    const count = allDelegates.filter(d => d.parish === w).length;
+                    return <option key={idx} value={w}>{w} ({count})</option>;
+                  })}
+                </select>
+              </div>
+
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex flex-wrap gap-1.5 text-xs pt-1 border-t border-[#382015]">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  statusFilter === 'all' ? 'bg-[#d96b27] text-white shadow-md' : 'text-[#f4ece1]/70 hover:text-white bg-[#140b07]'
+                }`}
+              >
+                All ({allDelegates.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('pending')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  statusFilter === 'pending' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-300 hover:text-white bg-[#140b07]'
+                }`}
+              >
+                ⏳ Pending Arrival ({totalPending})
+              </button>
+              <button
+                onClick={() => setStatusFilter('present')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  statusFilter === 'present' ? 'bg-green-600 text-white shadow-md' : 'text-green-400 hover:text-white bg-[#140b07]'
+                }`}
+              >
+                ✅ Present ({totalPresent})
+              </button>
+              <button
+                onClick={() => setStatusFilter('dona')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  statusFilter === 'dona' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-300 hover:text-white bg-[#140b07]'
+                }`}
+              >
+                👩 By Dona ({donaCheckins.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('neha')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  statusFilter === 'neha' ? 'bg-purple-600 text-white shadow-md' : 'text-purple-300 hover:text-white bg-[#140b07]'
+                }`}
+              >
+                👩 By Neha ({nehaCheckins.length})
+              </button>
+            </div>
           </div>
 
-          {/* Right Column: Live Desk Roster & Real-Time Stats */}
-          <div className="lg:col-span-6 p-3.5 sm:p-6 flex flex-col bg-[#140b07]">
-            
-            {/* Real-Time Cloud Stats */}
-            <div className="grid grid-cols-2 gap-3 mb-4 flex-shrink-0">
-              <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-[#e5c158]">Total Present</p>
-                  <p className="text-2xl font-black text-white">{totalPresent} <span className="text-xs text-gray-400 font-normal">/ {totalRegistered}</span></p>
-                </div>
-                <Users className="w-6 h-6 text-[#e5c158]" />
-              </div>
-
-              <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-[#e5c158]">Cash Collected</p>
-                  <p className="text-2xl font-black text-amber-400">₹{totalCashCollected}</p>
-                </div>
-                <Banknote className="w-6 h-6 text-amber-400" />
-              </div>
+          {/* Participant Cards Grid List */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between px-1 text-xs text-[#f4ece1]/70">
+              <span>Showing {sortedList.length} Participants</span>
+              <span>Tap <strong>Check In</strong> to collect fee &amp; admit</span>
             </div>
 
-            {/* Volunteer Breakdown Quick Mini Cards */}
-            <div className="grid grid-cols-2 gap-2 mb-3 flex-shrink-0 text-xs">
-              <div className="p-2.5 rounded-xl bg-[#1c120c] border border-blue-500/30">
-                <p className="text-[10px] text-blue-400 font-bold">👩 Dona George</p>
-                <p className="font-extrabold text-white mt-0.5">{donaCheckins.length} Admitted • <span className="text-amber-300">₹{donaCash}</span></p>
+            {sortedList.length === 0 ? (
+              <div className="p-12 text-center bg-[#1c120c] rounded-3xl border border-[#d4af37]/20 space-y-2">
+                <Users className="w-10 h-10 text-gray-600 mx-auto" />
+                <p className="text-sm font-bold text-gray-400">No participants match your search.</p>
+                <p className="text-xs text-gray-500">Try clearing the search or filter.</p>
               </div>
-
-              <div className="p-2.5 rounded-xl bg-[#1c120c] border border-purple-500/30">
-                <p className="text-[10px] text-purple-400 font-bold">👩 Neha Miriam</p>
-                <p className="font-extrabold text-white mt-0.5">{nehaCheckins.length} Admitted • <span className="text-amber-300">₹{nehaCash}</span></p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mb-2 flex-shrink-0">
-              <h4 className="font-cinzel text-xs font-bold text-[#e5c158] uppercase tracking-wider">
-                Live Cloud Feed ({totalPresent} Checked In)
-              </h4>
-              <span className="text-[10px] text-[#f4ece1]/60">Synced across all devices</span>
-            </div>
-
-            {/* Live Feed List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {allDelegates.filter(d => d.isPresent).length === 0 ? (
-                <div className="text-center py-12 text-gray-500 text-xs space-y-2">
-                  <Camera className="w-8 h-8 mx-auto text-gray-600 animate-bounce" />
-                  <p>No delegates checked in yet.</p>
-                  <p className="text-[10px]">Aim camera at any QR code to begin check-in!</p>
-                </div>
-              ) : (
-                allDelegates.filter(d => d.isPresent).map((item, idx) => (
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {sortedList.map((delegate, idx) => (
                   <div
                     key={idx}
-                    className="p-3 rounded-xl bg-[#1c120c] border border-[#382015] hover:border-[#d4af37]/40 flex items-center justify-between text-xs transition-colors"
+                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
+                      delegate.isPresent
+                        ? 'bg-[#140b07] border-green-500/30'
+                        : 'bg-[#1c120c] border-[#d4af37]/30 hover:border-[#e5c158]'
+                    }`}
                   >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-sm">{item.fullName}</span>
-                        <span className="text-[10px] font-mono text-[#e5c158] bg-[#2a1a12] px-1.5 py-0.2 rounded border border-[#d4af37]/20">
-                          {item.ticketId}
-                        </span>
+                    {/* Top Row: Name & Ticket ID */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-base sm:text-lg font-bold text-white leading-tight">
+                          {delegate.fullName}
+                        </h3>
+                        <p className="text-xs text-[#e5c158] font-medium mt-0.5 flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-[#d96b27]" />
+                          <span>{delegate.parish}</span>
+                          <span className="text-gray-500">•</span>
+                          <span className="text-[#f4ece1]/80 truncate">{delegate.houseName}</span>
+                        </p>
                       </div>
-                      <p className="text-[11px] text-[#f4ece1]/70">
-                        {item.parish} • {item.houseName}
-                      </p>
-                      <p className="text-[10px] text-blue-300 font-medium">
-                        Admitted by: <strong>{item.checkedInBy || 'Desk'}</strong>
-                      </p>
-                    </div>
 
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
-                        {item.checkedInTime}
+                      <span className="font-mono text-[11px] font-bold text-[#e5c158] bg-[#2a1a12] px-2.5 py-1 rounded-lg border border-[#d4af37]/30 flex-shrink-0">
+                        {delegate.ticketId}
                       </span>
-                      <p className="text-[10px] font-bold text-amber-300 mt-1">
-                        {item.isCash ? '💵 ₹150 Cash' : '✅ Online'}
-                      </p>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
 
+                    {/* Middle Row: Phone & Fee Info */}
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-[#382015]">
+                      <span className="text-[11px] text-[#f4ece1]/70 font-mono flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-gray-400" />
+                        {delegate.phone || '—'}
+                      </span>
+
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        delegate.isCash ? 'bg-amber-500/20 text-amber-300' : 'bg-green-500/20 text-green-300'
+                      }`}>
+                        {delegate.isCash ? '💵 ₹150 Spot Cash' : '✅ Online Paid'}
+                      </span>
+                    </div>
+
+                    {/* Bottom Row: Check-In Action Button */}
+                    <div>
+                      {delegate.isPresent ? (
+                        <div 
+                          onClick={() => handleOpenCheckinModal(delegate)}
+                          className="w-full py-2.5 px-3 rounded-xl bg-green-500/10 border border-green-500/40 text-green-400 text-xs font-bold flex items-center justify-between cursor-pointer hover:bg-green-500/20 transition-all"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                            <span>PRESENT ({delegate.checkedInTime})</span>
+                          </div>
+                          <span className="text-[10px] text-blue-300 font-medium truncate">
+                            By {delegate.checkedInBy || 'Desk'}
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCheckinModal(delegate)}
+                          className="w-full py-3 px-4 rounded-xl bg-orange-gradient hover:brightness-110 active:scale-98 text-white font-extrabold text-xs sm:text-sm shadow-md border border-[#e5c158]/50 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                        >
+                          <UserCheck className="w-4 h-4" />
+                          <span>Admit &amp; Collect Fee →</span>
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
       )}
 
-      {/* TAB 3: SUPER ADMIN REPORT DASHBOARD */}
+      {/* 3. SUPER ADMIN REPORT DASHBOARD */}
       {viewTab === 'admin' && (
-        <div className="flex-1 p-4 sm:p-8 overflow-y-auto bg-[#140b07] space-y-6">
+        <div className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full space-y-6">
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#382015] pb-4">
             <div>
@@ -712,12 +668,6 @@ export default function ContinuousScanner({ onClose }) {
                     </span>
                     <h4 className="text-xl font-bold text-white mt-1.5">Dona George</h4>
                   </div>
-                  <button
-                    onClick={() => setAdminFilter('dona')}
-                    className="text-xs font-bold text-blue-300 hover:text-white underline cursor-pointer"
-                  >
-                    View Her List ({donaCheckins.length}) →
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#382015]">
@@ -741,12 +691,6 @@ export default function ContinuousScanner({ onClose }) {
                     </span>
                     <h4 className="text-xl font-bold text-white mt-1.5">Neha Miriam Jose</h4>
                   </div>
-                  <button
-                    onClick={() => setAdminFilter('neha')}
-                    className="text-xs font-bold text-purple-300 hover:text-white underline cursor-pointer"
-                  >
-                    View Her List ({nehaCheckins.length}) →
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#382015]">
@@ -765,160 +709,36 @@ export default function ContinuousScanner({ onClose }) {
             </div>
           </div>
 
-          {/* Filter Pills & Search */}
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-            <div className="flex flex-wrap gap-1.5 bg-[#1c120c] p-1.5 rounded-2xl border border-[#d4af37]/30 text-xs w-full sm:w-auto">
-              <button
-                onClick={() => setAdminFilter('all')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                  adminFilter === 'all' ? 'bg-[#d96b27] text-white shadow-md' : 'text-[#f4ece1]/70 hover:text-white'
-                }`}
-              >
-                All ({allDelegates.length})
-              </button>
-              <button
-                onClick={() => setAdminFilter('present')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                  adminFilter === 'present' ? 'bg-green-600 text-white shadow-md' : 'text-green-400 hover:text-white'
-                }`}
-              >
-                Present ({totalPresent})
-              </button>
-              <button
-                onClick={() => setAdminFilter('pending')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                  adminFilter === 'pending' ? 'bg-red-600 text-white shadow-md' : 'text-red-300 hover:text-white'
-                }`}
-              >
-                Pending ({totalPending})
-              </button>
-              <button
-                onClick={() => setAdminFilter('dona')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                  adminFilter === 'dona' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-300 hover:text-white'
-                }`}
-              >
-                By Dona ({donaCheckins.length})
-              </button>
-              <button
-                onClick={() => setAdminFilter('neha')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                  adminFilter === 'neha' ? 'bg-purple-600 text-white shadow-md' : 'text-purple-300 hover:text-white'
-                }`}
-              >
-                By Neha ({nehaCheckins.length})
-              </button>
-            </div>
-
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Name, Ward, House, Pass ID..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1c120c] border border-[#d4af37]/30 text-white text-xs placeholder-gray-500 focus:outline-none focus:border-[#d96b27]"
-              />
-            </div>
-          </div>
-
-          {/* Master Table */}
-          <div className="bg-[#1c120c] rounded-3xl border border-[#d4af37]/30 overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#2a1a12] border-b border-[#382015] text-[#e5c158] font-cinzel uppercase text-[10px] tracking-wider">
-                  <tr>
-                    <th className="py-3.5 px-4">Pass ID</th>
-                    <th className="py-3.5 px-4">Delegate Name</th>
-                    <th className="py-3.5 px-4">Ward / House</th>
-                    <th className="py-3.5 px-4">Phone</th>
-                    <th className="py-3.5 px-4">Fee Mode</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4">Admitted By</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#382015]">
-                  {adminFilteredList.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="py-10 text-center text-gray-500">
-                        No delegates match the selected filter.
-                      </td>
-                    </tr>
-                  ) : (
-                    adminFilteredList.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-[#231610] transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-[#e5c158]">
-                          {item.ticketId}
-                        </td>
-                        <td className="py-3 px-4 font-bold text-white">
-                          {item.fullName}
-                        </td>
-                        <td className="py-3 px-4 text-[#f4ece1]/80">
-                          {item.parish} • {item.houseName}
-                        </td>
-                        <td className="py-3 px-4 font-mono text-[#f4ece1]/70">
-                          {item.phone || '—'}
-                        </td>
-                        <td className="py-3 px-4 font-semibold">
-                          {item.isCash ? (
-                            <span className="text-amber-300">💵 Spot Cash (₹150)</span>
-                          ) : (
-                            <span className="text-green-400">✅ Online Paid</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          {item.isPresent ? (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/40 inline-flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              PRESENT ({item.checkedInTime})
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-700/30 text-gray-400 border border-gray-600/30">
-                              Not Arrived
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 font-medium text-blue-300">
-                          {item.isPresent ? (item.checkedInBy || 'Desk') : '—'}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
         </div>
       )}
 
-      {/* 4. INSTANT CENTERED POP-UP MODAL UPON SCANNING (No Scrolling Required!) */}
-      {activeModalData && (
+      {/* 4. THE EXACT "DELEGATE CHECK-IN & FEE" MODAL (As In Screenshot) */}
+      {selectedDelegate && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="relative max-w-md w-full bg-[#1c120c] rounded-3xl border-2 border-[#d4af37] shadow-2xl overflow-hidden text-white animate-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
             <div className={`p-4 text-center border-b flex items-center justify-between px-6 ${
-              modalType === 'locked_duplicate'
+              modalState === 'locked'
                 ? 'bg-red-950/80 border-red-500/40 text-red-300'
-                : modalType === 'success_done'
+                : modalState === 'success'
                 ? 'bg-green-950/80 border-green-500/40 text-green-300'
                 : 'bg-orange-gradient border-[#e5c158]/50 text-white'
             }`}>
               <div className="flex items-center gap-2">
-                {modalType === 'locked_duplicate' ? (
+                {modalState === 'locked' ? (
                   <Lock className="w-5 h-5 text-red-400" />
-                ) : modalType === 'success_done' ? (
+                ) : modalState === 'success' ? (
                   <CheckCircle2 className="w-5 h-5 text-green-400" />
                 ) : (
                   <ShieldCheck className="w-5 h-5 text-[#ffe8aa]" />
                 )}
                 <span className="font-cinzel text-xs sm:text-sm font-bold tracking-wider uppercase">
-                  {modalType === 'locked_duplicate'
+                  {modalState === 'locked'
                     ? '⛔ Locked: Already Admitted'
-                    : modalType === 'success_done'
+                    : modalState === 'success'
                     ? '🎉 Attendance Confirmed'
-                    : '⚡ Delegate Check-In & Fee'}
+                    : '⚡ DELEGATE CHECK-IN & FEE'}
                 </span>
               </div>
 
@@ -937,48 +757,50 @@ export default function ContinuousScanner({ onClose }) {
               <div className="bg-[#140b07] p-4 rounded-2xl border border-[#d4af37]/30 space-y-2">
                 <div className="flex justify-between items-start border-b border-[#382015] pb-2.5">
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-[#e5c158]">Delegate Name</span>
-                    <h3 className="text-xl font-bold text-white mt-0.5">{activeModalData.fullName}</h3>
+                    <span className="text-[10px] uppercase font-bold text-[#e5c158]">DELEGATE NAME</span>
+                    <h3 className="text-xl font-black text-white mt-0.5 uppercase tracking-wide">
+                      {selectedDelegate.fullName}
+                    </h3>
                   </div>
                   <span className="font-mono text-xs font-bold text-[#e5c158] bg-[#2a1a12] px-2.5 py-1 rounded-lg border border-[#d4af37]/30">
-                    {activeModalData.ticketId}
+                    {selectedDelegate.ticketId}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                   <div>
-                    <span className="text-white/60 text-[10px] uppercase">Ward Number</span>
-                    <p className="font-bold text-[#e5c158]">{activeModalData.parish}</p>
+                    <span className="text-white/60 text-[10px] uppercase font-bold">WARD NUMBER</span>
+                    <p className="font-bold text-[#e5c158]">{selectedDelegate.parish}</p>
                   </div>
                   <div>
-                    <span className="text-white/60 text-[10px] uppercase">House Name</span>
-                    <p className="font-bold text-white truncate">{activeModalData.houseName}</p>
+                    <span className="text-white/60 text-[10px] uppercase font-bold">HOUSE NAME</span>
+                    <p className="font-bold text-white truncate">{selectedDelegate.houseName}</p>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-white/60 text-[10px] uppercase">Phone Number</span>
-                    <p className="font-mono font-medium text-white">{activeModalData.phone || '—'}</p>
+                    <span className="text-white/60 text-[10px] uppercase font-bold">PHONE NUMBER</span>
+                    <p className="font-mono font-medium text-white">{selectedDelegate.phone || '—'}</p>
                   </div>
                 </div>
               </div>
 
-              {/* CASE A: LOCKED DUPLICATE ERROR POPUP */}
-              {modalType === 'locked_duplicate' && (
+              {/* CASE A: LOCKED WARNING POPUP */}
+              {modalState === 'locked' && (
                 <div className="p-4 rounded-2xl bg-red-500/20 border-2 border-red-500 text-red-200 text-xs space-y-2">
                   <div className="flex items-center gap-2 font-bold text-red-300 text-sm">
                     <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                     <span>ALREADY VERIFIED &amp; ADMITTED!</span>
                   </div>
                   <p className="leading-relaxed">
-                    This ticket pass was <strong>ALREADY CHECKED IN</strong> at <strong>{activeModalData.checkedInTime}</strong> by <strong>{activeModalData.checkedInBy || 'Volunteer'}</strong>.
+                    This participant was <strong>ALREADY CHECKED IN</strong> at <strong>{selectedDelegate.checkedInTime}</strong> by <strong>{selectedDelegate.checkedInBy || 'Volunteer'}</strong>.
                   </p>
                   <p className="text-[11px] text-red-300/80 font-bold bg-black/40 p-2 rounded-lg">
-                    🔒 QR code is LOCKED. Do not issue a second delegate badge!
+                    🔒 Status is LOCKED. Cannot be checked in again!
                   </p>
                 </div>
               )}
 
               {/* CASE B: CASH CONFIRMATION POPUP */}
-              {modalType === 'confirm_cash' && (
+              {modalState === 'confirm' && (
                 <div className="p-4 rounded-2xl bg-amber-500/20 border-2 border-amber-500 text-white space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1010,48 +832,24 @@ export default function ContinuousScanner({ onClose }) {
                 </div>
               )}
 
-              {/* CASE C: ONLINE PAID CONFIRMATION POPUP */}
-              {modalType === 'confirm_online' && (
-                <div className="p-4 rounded-2xl bg-green-500/20 border-2 border-green-500 text-white space-y-3">
-                  <div className="flex items-center gap-2 text-green-400 font-bold text-xs">
-                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                    <span>Online Payment Verified (₹0 to collect from delegate)</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleConfirmCheckin}
-                    disabled={isSubmitting}
-                    className="w-full py-4 px-4 rounded-2xl bg-green-600 hover:bg-green-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span>
-                      {isSubmitting
-                        ? 'Recording...'
-                        : `Confirm & Hand Badge (by ${activeVolunteer})`}
-                    </span>
-                  </button>
-                </div>
-              )}
-
-              {/* CASE D: SUCCESS CONFIRMATION STATE */}
-              {modalType === 'success_done' && (
+              {/* CASE C: SUCCESS POPUP */}
+              {modalState === 'success' && (
                 <div className="p-4 rounded-2xl bg-green-500/20 border-2 border-green-500 text-green-300 text-center space-y-1">
                   <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto" />
                   <h4 className="text-base font-bold text-white">Admitted Successfully!</h4>
                   <p className="text-xs text-green-300">
-                    Checked in by <strong>{activeModalData.checkedInBy}</strong> at {activeModalData.checkedInTime}
+                    Checked in by <strong>{selectedDelegate.checkedInBy}</strong> at {selectedDelegate.checkedInTime}
                   </p>
                 </div>
               )}
 
-              {/* Cancel / Scan Next Button */}
+              {/* Cancel / Close Button */}
               <button
                 type="button"
                 onClick={handleCloseModal}
                 className="w-full py-2.5 rounded-xl bg-[#2a1a12] hover:bg-[#382015] text-[#f4ece1]/80 font-bold text-xs border border-[#d4af37]/30 transition-colors cursor-pointer"
               >
-                {modalType === 'locked_duplicate' ? 'Close & Scan Next' : 'Cancel / Close'}
+                {modalState === 'locked' ? 'Close' : 'Cancel / Close'}
               </button>
 
             </div>
