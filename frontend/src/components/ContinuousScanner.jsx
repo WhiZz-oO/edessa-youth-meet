@@ -287,11 +287,13 @@ export default function ContinuousScanner({ onClose }) {
   const donaCheckins = allDelegates.filter(d => d.isPresent && (d.checkedInBy?.includes('Dona')));
   const donaPhysicalCash = donaCheckins.filter(d => d.isCash).length * 150;
   const donaUpiCount = donaCheckins.filter(d => !d.isCash).length;
+  const donaUpiCash = donaUpiCount * 150;
 
   // Neha Miriam Jose Audit
   const nehaCheckins = allDelegates.filter(d => d.isPresent && (d.checkedInBy?.includes('Neha')));
   const nehaPhysicalCash = nehaCheckins.filter(d => d.isCash).length * 150;
   const nehaUpiCount = nehaCheckins.filter(d => !d.isCash).length;
+  const nehaUpiCash = nehaUpiCount * 150;
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0d0705] text-white flex flex-col overflow-y-auto font-sans">
@@ -407,37 +409,57 @@ export default function ContinuousScanner({ onClose }) {
             </div>
           </div>
 
-          {/* Key Financial & Attendance Stats Cards */}
+          {/* Key Financial & Attendance Stats Cards with UPI Online Breakdown */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between">
+            
+            {/* 1. Total Present */}
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between shadow-lg">
               <div>
-                <p className="text-[10px] font-bold uppercase text-[#e5c158]">Total Present</p>
+                <p className="text-[10px] font-bold uppercase text-[#e5c158]">Total Admitted</p>
                 <p className="text-2xl font-black text-white">{totalPresent} <span className="text-xs text-gray-400 font-normal">/ {totalRegistered}</span></p>
+                <p className="text-[10px] text-green-400 font-semibold">₹{grandTotalRevenue} Total Value</p>
               </div>
               <Users className="w-6 h-6 text-[#e5c158]" />
             </div>
 
-            <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-amber-500/40 flex items-center justify-between">
+            {/* 2. Physical Cash in Hand */}
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border-2 border-amber-500/40 flex items-center justify-between shadow-lg">
               <div>
                 <p className="text-[10px] font-bold uppercase text-amber-300 flex items-center gap-1">
-                  <Banknote className="w-3.5 h-3.5" /> Physical Cash in Hand
+                  <Banknote className="w-3.5 h-3.5" /> Cash In Hand
                 </p>
                 <p className="text-2xl font-black text-amber-400">₹{totalPhysicalCashInHand}</p>
-                <p className="text-[9px] text-[#f4ece1]/60">{presentCashDelegates.length} cash delegates to count</p>
+                <p className="text-[10px] text-amber-200/80">{presentCashDelegates.length} cash delegates</p>
+              </div>
+              <Banknote className="w-6 h-6 text-amber-400" />
+            </div>
+
+            {/* 3. UPI Online in Bank */}
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border-2 border-blue-500/40 flex items-center justify-between shadow-lg">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-blue-400 flex items-center gap-1">
+                  <Smartphone className="w-3.5 h-3.5" /> UPI Received
+                </p>
+                <p className="text-2xl font-black text-blue-400">₹{totalUpiPaidInBank}</p>
+                <p className="text-[10px] text-blue-200/80">{presentUpiDelegates.length} online delegates</p>
+              </div>
+              <Smartphone className="w-6 h-6 text-blue-400" />
+            </div>
+
+            {/* 4. Volunteer Breakdown Combined */}
+            <div className="bg-[#1c120c] p-3 rounded-2xl border border-[#d4af37]/30 flex flex-col justify-between shadow-lg text-xs space-y-1">
+              <div className="flex justify-between items-center border-b border-[#382015] pb-1">
+                <span className="text-[10px] text-blue-400 font-bold">👩 Dona</span>
+                <span className="font-bold text-amber-300">₹{donaPhysicalCash} Cash</span>
+                <span className="text-[10px] text-blue-300 font-semibold">₹{donaUpiCash} UPI</span>
+              </div>
+              <div className="flex justify-between items-center pt-0.5">
+                <span className="text-[10px] text-purple-400 font-bold">👩 Neha</span>
+                <span className="font-bold text-amber-300">₹{nehaPhysicalCash} Cash</span>
+                <span className="text-[10px] text-purple-300 font-semibold">₹{nehaUpiCash} UPI</span>
               </div>
             </div>
 
-            <div className="bg-[#1c120c] p-3 rounded-2xl border border-blue-500/30 space-y-0.5">
-              <p className="text-[10px] text-blue-400 font-bold uppercase">👩 Dona George (In Hand)</p>
-              <p className="text-xl font-black text-amber-300">₹{donaPhysicalCash}</p>
-              <p className="text-[10px] text-[#f4ece1]/70">{donaCheckins.length} admitted • {donaUpiCount} UPI</p>
-            </div>
-
-            <div className="bg-[#1c120c] p-3 rounded-2xl border border-purple-500/30 space-y-0.5">
-              <p className="text-[10px] text-purple-400 font-bold uppercase">👩 Neha Miriam (In Hand)</p>
-              <p className="text-xl font-black text-amber-300">₹{nehaPhysicalCash}</p>
-              <p className="text-[10px] text-[#f4ece1]/70">{nehaCheckins.length} admitted • {nehaUpiCount} UPI</p>
-            </div>
           </div>
 
           {/* Search & Filter Bar */}
