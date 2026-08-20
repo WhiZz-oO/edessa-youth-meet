@@ -406,10 +406,10 @@ export default function ContinuousScanner({ onClose }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d0705] text-white flex flex-col overflow-hidden font-sans">
+    <div className="fixed inset-0 z-50 bg-[#0d0705] text-white flex flex-col overflow-y-auto font-sans">
       
       {/* 1. Header Bar */}
-      <header className="bg-[#1c120c] border-b border-[#d4af37]/30 px-3.5 sm:px-6 py-2.5 flex items-center justify-between shadow-xl flex-shrink-0">
+      <header className="sticky top-0 z-40 bg-[#1c120c]/95 backdrop-blur-md border-b border-[#d4af37]/30 px-3.5 sm:px-6 py-2.5 flex items-center justify-between shadow-xl flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-orange-gradient flex items-center justify-center font-bold text-white shadow-md">
             <Zap className="w-4 h-4" />
@@ -497,10 +497,10 @@ export default function ContinuousScanner({ onClose }) {
 
       {/* 2. SCANNER DESK VIEW (Clean, Uncongested Layout) */}
       {viewTab === 'scanner' && (
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12">
           
           {/* Left Column: Full-Height Clean Camera & Quick Search */}
-          <div className="lg:col-span-6 p-4 sm:p-6 flex flex-col space-y-4 overflow-y-auto border-r border-[#382015]">
+          <div className="lg:col-span-6 p-3.5 sm:p-6 flex flex-col space-y-3 sm:space-y-4 border-b lg:border-b-0 lg:border-r border-[#382015]">
             
             {/* Active Volunteer Banner */}
             <div className="p-2.5 px-4 rounded-2xl bg-[#1c120c] border border-[#d4af37]/30 flex items-center justify-between text-xs flex-shrink-0">
@@ -515,7 +515,7 @@ export default function ContinuousScanner({ onClose }) {
             </div>
 
             {/* Rigid Large Non-Shrinking Camera Viewfinder */}
-            <div className="relative rounded-3xl overflow-hidden border-2 border-[#e5c158] bg-black shadow-2xl p-1 flex-shrink-0 w-full h-[340px] sm:h-[420px]">
+            <div className="relative rounded-3xl overflow-hidden border-2 border-[#e5c158] bg-black shadow-2xl p-1 flex-shrink-0 w-full h-[280px] sm:h-[380px]">
               <div id="continuous-qr-reader" className="w-full h-full bg-black rounded-2xl overflow-hidden flex items-center justify-center"></div>
               
               {/* Guide Overlay */}
@@ -556,7 +556,7 @@ export default function ContinuousScanner({ onClose }) {
           </div>
 
           {/* Right Column: Live Desk Roster & Real-Time Stats */}
-          <div className="lg:col-span-6 p-4 sm:p-6 flex flex-col overflow-hidden bg-[#140b07]">
+          <div className="lg:col-span-6 p-3.5 sm:p-6 flex flex-col bg-[#140b07]">
             
             {/* Real-Time Cloud Stats */}
             <div className="grid grid-cols-2 gap-3 mb-4 flex-shrink-0">
