@@ -403,61 +403,81 @@ export default function ContinuousScanner({ onClose }) {
             </div>
           </div>
 
-          {/* 5 Distinct Dedicated Stat Boxes (Total, Cash in Hand, UPI Online, Dona George Box, Neha Miriam Box) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+          {/* 4 Perfectly Symmetrical & Balanced Stat Boxes (2x2 on mobile, 4 in a row on desktop) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
             
             {/* Box 1: Total Admitted */}
-            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between shadow-lg">
-              <div>
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex flex-col justify-between shadow-lg h-full">
+              <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold uppercase text-[#e5c158]">Total Admitted</p>
-                <p className="text-xl sm:text-2xl font-black text-white">{totalPresent} <span className="text-xs text-gray-400 font-normal">/ {totalRegistered}</span></p>
-                <p className="text-[10px] text-green-400 font-semibold">₹{grandTotalRevenue} Total</p>
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-[#e5c158]" />
               </div>
-              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-[#e5c158] flex-shrink-0" />
+              <div className="mt-1">
+                <p className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                  {totalPresent} <span className="text-xs text-gray-400 font-normal">/ {totalRegistered}</span>
+                </p>
+                <p className="text-[10px] text-green-400 font-semibold mt-0.5">
+                  ₹{grandTotalRevenue} Total Value
+                </p>
+              </div>
             </div>
 
-            {/* Box 2: Physical Cash in Hand */}
-            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border-2 border-amber-500/40 flex items-center justify-between shadow-lg">
-              <div>
+            {/* Box 2: Combined Fee Collection (Cash in Hand + UPI Online) */}
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border-2 border-amber-500/40 flex flex-col justify-between shadow-lg h-full">
+              <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold uppercase text-amber-300 flex items-center gap-1">
-                  <Banknote className="w-3 h-3" /> Cash in Hand
+                  <Banknote className="w-3.5 h-3.5" /> Total Collected
                 </p>
-                <p className="text-xl sm:text-2xl font-black text-amber-400">₹{totalPhysicalCashInHand}</p>
-                <p className="text-[10px] text-amber-200/80">{presentCashDelegates.length} cash delegates</p>
+                <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
+                  ₹{grandTotalRevenue}
+                </span>
               </div>
-              <Banknote className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 flex-shrink-0" />
+              <div className="mt-1 space-y-0.5">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-amber-300 font-bold">💵 Cash in Hand:</span>
+                  <span className="text-base sm:text-lg font-black text-amber-400">₹{totalPhysicalCashInHand}</span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-blue-400 font-bold">📱 UPI Online:</span>
+                  <span className="text-xs sm:text-sm font-black text-blue-400">₹{totalUpiPaidInBank}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Box 3: UPI Online Received */}
-            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border-2 border-blue-500/40 flex items-center justify-between shadow-lg">
-              <div>
-                <p className="text-[10px] font-bold uppercase text-blue-400 flex items-center gap-1">
-                  <Smartphone className="w-3 h-3" /> UPI Received
-                </p>
-                <p className="text-xl sm:text-2xl font-black text-blue-400">₹{totalUpiPaidInBank}</p>
-                <p className="text-[10px] text-blue-200/80">{presentUpiDelegates.length} online delegates</p>
-              </div>
-              <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 flex-shrink-0" />
-            </div>
-
-            {/* Box 4: Dedicated Dona George Box */}
-            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border-2 border-blue-500/40 flex items-center justify-between shadow-lg">
-              <div>
+            {/* Box 3: Dedicated Dona George Box */}
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border-2 border-blue-500/40 flex flex-col justify-between shadow-lg h-full">
+              <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold uppercase text-blue-400">👩 Dona George</p>
-                <p className="text-xl sm:text-2xl font-black text-amber-300">₹{donaPhysicalCash} <span className="text-[10px] text-[#f4ece1]/70 font-normal">Cash</span></p>
-                <p className="text-[10px] text-blue-300 font-semibold">{donaCheckins.length} admitted • ₹{donaUpiCash} UPI</p>
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
               </div>
-              <User className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 flex-shrink-0" />
+              <div className="mt-1 space-y-0.5">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-amber-300 font-bold">💵 Cash:</span>
+                  <span className="text-base sm:text-lg font-black text-amber-400">₹{donaPhysicalCash}</span>
+                </div>
+                <div className="flex justify-between items-baseline text-[10px]">
+                  <span className="text-[#f4ece1]/70">{donaCheckins.length} admitted</span>
+                  <span className="text-blue-300 font-semibold">₹{donaUpiCash} UPI</span>
+                </div>
+              </div>
             </div>
 
-            {/* Box 5: Dedicated Neha Miriam Jose Box */}
-            <div className="bg-[#1c120c] p-3 sm:p-3.5 rounded-2xl border-2 border-purple-500/40 flex items-center justify-between shadow-lg col-span-2 sm:col-span-1">
-              <div>
+            {/* Box 4: Dedicated Neha Miriam Jose Box */}
+            <div className="bg-[#1c120c] p-3.5 rounded-2xl border-2 border-purple-500/40 flex flex-col justify-between shadow-lg h-full">
+              <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold uppercase text-purple-400">👩 Neha Miriam</p>
-                <p className="text-xl sm:text-2xl font-black text-amber-300">₹{nehaPhysicalCash} <span className="text-[10px] text-[#f4ece1]/70 font-normal">Cash</span></p>
-                <p className="text-[10px] text-purple-300 font-semibold">{nehaCheckins.length} admitted • ₹{nehaUpiCash} UPI</p>
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
               </div>
-              <User className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400 flex-shrink-0" />
+              <div className="mt-1 space-y-0.5">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-amber-300 font-bold">💵 Cash:</span>
+                  <span className="text-base sm:text-lg font-black text-amber-400">₹{nehaPhysicalCash}</span>
+                </div>
+                <div className="flex justify-between items-baseline text-[10px]">
+                  <span className="text-[#f4ece1]/70">{nehaCheckins.length} admitted</span>
+                  <span className="text-purple-300 font-semibold">₹{nehaUpiCash} UPI</span>
+                </div>
+              </div>
             </div>
 
           </div>
