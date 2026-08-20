@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { 
   CheckCircle2, AlertTriangle, Camera, X, Volume2, VolumeX, 
   Users, Banknote, Search, RefreshCw, Sparkles, ShieldCheck, Zap,
-  UserCheck, UserX, Award, Filter, ChevronRight, Clock, User
+  UserCheck, Award, Lock, ArrowRight, User
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GOOGLE_SHEETS_CONFIG } from '../data/googleSheetsConfig';
@@ -14,35 +14,36 @@ const VOLUNTEERS = [
 ];
 
 export default function ContinuousScanner({ onClose }) {
-  // Current active volunteer on this device
   const [activeVolunteer, setActiveVolunteer] = useState(() => {
     return localStorage.getItem('edessa_active_volunteer') || 'Dona George';
   });
 
-  // Mode: 'scanner' (Desk Camera Mode) | 'admin' (Super Admin Breakdown Dashboard)
-  const [viewTab, setViewTab] = useState('scanner');
-
-  // Master database from Google Sheets
+  const [viewTab, setViewTab] = useState('scanner'); // 'scanner' | 'admin'
   const [allDelegates, setAllDelegates] = useState([]);
   const [isLoadingSheet, setIsLoadingSheet] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState('');
 
-  // Scanner state
-  const [pendingScan, setPendingScan] = useState(null); // Delegate waiting for cash confirmation
-  const [scanStatus, setScanStatus] = useState(null); // 'pending_confirm' | 'success' | 'duplicate'
+  // Active Popup Modal State
+  const [activeModalData, setActiveModalData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalType, setModalType] = useState(null); // 'confirm_cash' | 'confirm_online' | 'locked_duplicate' | 'success_done'
+
   const [cameraError, setCameraError] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Admin filter
-  const [adminFilter, setAdminFilter] = useState('all'); // 'all' | 'present' | 'pending' | 'dona' | 'neha'
+  const [adminFilter, setAdminFilter] = useState('all');
 
   const scannerRef = useRef(null);
   const lastScannedCodeRef = useRef('');
   const lastScannedTimeRef = useRef(0);
+  const allDelegatesRef = useRef([]);
 
-  // 1. Fetch Live Database from Google Sheet
+  // Keep ref synchronized with state for real-time scanner check
+  useEffect(() => {
+    allDelegatesRef.current = allDelegates;
+  }, [allDelegates]);
+
+  // 1. Fetch Live Master Database from Google Sheet
   const fetchLiveSheetData = async () => {
     setIsLoadingSheet(true);
     const sheetGvizUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:json&t=${Date.now()}`;
@@ -69,7 +70,6 @@ export default function ContinuousScanner({ onClose }) {
 
           const isPresent = attendanceRaw.toUpperCase().includes('PRESENT');
           
-          // Parse volunteer name if recorded (e.g. "PRESENT (10:15 am • Dona George)" or "by Dona George")
           let checkedInBy = '';
           let checkedInTime = '';
           if (isPresent) {
@@ -81,7 +81,6 @@ export default function ContinuousScanner({ onClose }) {
               checkedInBy = 'Registration Desk';
             }
 
-            // Extract time inside parenthesis
             const match = attendanceRaw.match(/\((.*?)\)/);
             checkedInTime = match ? match[1].replace(/by.*|•.*/i, '').trim() : 'Checked In';
           }
@@ -109,6 +108,7 @@ export default function ContinuousScanner({ onClose }) {
         }).filter(d => d.ticketId && d.fullName);
 
         setAllDelegates(delegates);
+        allDelegatesRef.current = delegates;
         setLastSyncTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
       }
     } catch (err) {
@@ -118,10 +118,10 @@ export default function ContinuousScanner({ onClose }) {
     }
   };
 
-  // Poll Google Sheets every 8 seconds for multi-device sync
+  // Poll Google Sheets every 6 seconds for live multi-device sync
   useEffect(() => {
     fetchLiveSheetData();
-    const interval = setInterval(fetchLiveSheetData, 8000);
+    const interval = setInterval(fetchLiveSheetData, 6000);
     return () => clearInterval(interval);
   }, []);
 
@@ -130,7 +130,6 @@ export default function ContinuousScanner({ onClose }) {
     localStorage.setItem('edessa_active_volunteer', name);
   };
 
-  // Audio Beep Effect
   const playBeep = (isSuccess) => {
     if (!soundEnabled) return;
     try {
@@ -148,16 +147,16 @@ export default function ContinuousScanner({ onClose }) {
         osc.start();
         osc.stop(audioCtx.currentTime + 0.2);
       } else {
-        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(250, audioCtx.currentTime);
         gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.3);
+        osc.stop(audioCtx.currentTime + 0.35);
       }
     } catch (e) {}
   };
 
-  // Start continuous camera when in 'scanner' tab
+  // Continuous Camera Scanner Setup
   useEffect(() => {
     if (viewTab !== 'scanner') return;
 
@@ -205,7 +204,8 @@ export default function ContinuousScanner({ onClose }) {
 
   const handleScanSuccess = (decodedText) => {
     const now = Date.now();
-    if (decodedText === lastScannedCodeRef.current && now - lastScannedTimeRef.current < 2500) {
+    // Debounce scan of same QR within 3 seconds
+    if (decodedText === lastScannedCodeRef.current && now - lastScannedTimeRef.current < 3000) {
       return;
     }
     lastScannedCodeRef.current = decodedText;
@@ -222,7 +222,6 @@ export default function ContinuousScanner({ onClose }) {
     let phone = '';
     let paymentMode = 'Spot Cash';
 
-    // Parse piped format: EDESSA-2026-6224|Albin Mathews|Ward 13|Kocheettathottu|9207215221|cash
     if (codeText.includes('|')) {
       const parts = codeText.split('|');
       ticketId = parts[0] ? parts[0].trim() : '';
@@ -248,13 +247,14 @@ export default function ContinuousScanner({ onClose }) {
       ticketId = codeText.trim();
     }
 
-    // Match with master database from Google Sheet
-    const matched = allDelegates.find(d => 
+    // Lookup in fresh delegates list
+    const currentList = allDelegatesRef.current.length > 0 ? allDelegatesRef.current : allDelegates;
+    const matched = currentList.find(d => 
       (ticketId && d.ticketId.toUpperCase() === ticketId.toUpperCase()) ||
       (fullName && d.fullName.toLowerCase() === fullName.toLowerCase())
     );
 
-    const delegateData = matched || {
+    const delegate = matched || {
       ticketId: ticketId || 'EDESSA-PASS',
       fullName: fullName || 'Delegate',
       houseName: houseName || '—',
@@ -265,30 +265,35 @@ export default function ContinuousScanner({ onClose }) {
       isPresent: false,
     };
 
-    if (delegateData.isPresent) {
-      // DUPLICATE ALREADY CHECKED IN
+    setActiveModalData(delegate);
+
+    // CRITICAL: STRICT LOCK CHECK
+    if (delegate.isPresent) {
+      // PLAY WARNING TONE & SHOW RED LOCKED POPUP
       playBeep(false);
-      setScanStatus('duplicate');
-      setPendingScan(delegateData);
+      setModalType('locked_duplicate');
     } else {
-      // SHOW CASH CONFIRMATION PROMPT
+      // PLAY SUCCESS BEEP & SHOW FEE CONFIRMATION POPUP
       playBeep(true);
-      setScanStatus('pending_confirm');
-      setPendingScan(delegateData);
+      if (delegate.isCash) {
+        setModalType('confirm_cash');
+      } else {
+        setModalType('confirm_online');
+      }
     }
   };
 
-  // Confirm Check-in & Cash Collection
+  // Confirm Check-in & Record in Cloud
   const handleConfirmCheckin = async () => {
-    if (!pendingScan) return;
+    if (!activeModalData) return;
     setIsSubmitting(true);
 
     const checkinTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
     const formattedAttendance = `${checkinTime} • ${activeVolunteer}`;
 
-    // Optimistic UI update immediately
+    // Optimistic UI update
     setAllDelegates(prev => prev.map(d => {
-      if (d.ticketId === pendingScan.ticketId) {
+      if (d.ticketId === activeModalData.ticketId) {
         return {
           ...d,
           isPresent: true,
@@ -300,21 +305,21 @@ export default function ContinuousScanner({ onClose }) {
       return d;
     }));
 
-    setScanStatus('success');
-    setPendingScan({
-      ...pendingScan,
+    setModalType('success_done');
+    setActiveModalData(prev => ({
+      ...prev,
       isPresent: true,
       checkedInBy: activeVolunteer,
       checkedInTime: checkinTime,
-    });
+    }));
 
     confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
+      particleCount: 70,
+      spread: 60,
+      origin: { y: 0.5 },
     });
 
-    // Send to Google Sheets
+    // Send to Google Sheets webhook
     if (GOOGLE_SHEETS_CONFIG.webAppUrl && !GOOGLE_SHEETS_CONFIG.webAppUrl.includes('REPLACE_WITH')) {
       try {
         await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
@@ -323,8 +328,8 @@ export default function ContinuousScanner({ onClose }) {
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
             action: 'checkin',
-            ticketId: pendingScan.ticketId,
-            fullName: pendingScan.fullName,
+            ticketId: activeModalData.ticketId,
+            fullName: activeModalData.fullName,
             time: formattedAttendance,
           }),
         });
@@ -335,15 +340,23 @@ export default function ContinuousScanner({ onClose }) {
 
     setIsSubmitting(false);
 
-    // Refresh master sheet in 1.5s
-    setTimeout(fetchLiveSheetData, 1500);
+    // Auto close success popup after 1.8 seconds to ready next scan
+    setTimeout(() => {
+      setActiveModalData(null);
+      setModalType(null);
+      fetchLiveSheetData();
+    }, 1800);
+  };
+
+  const handleCloseModal = () => {
+    setActiveModalData(null);
+    setModalType(null);
   };
 
   const handleManualSearchCheckin = (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     
-    // Find in allDelegates
     const q = searchQuery.trim().toLowerCase();
     const matched = allDelegates.find(d => 
       d.ticketId.toLowerCase().includes(q) ||
@@ -359,24 +372,22 @@ export default function ContinuousScanner({ onClose }) {
     setSearchQuery('');
   };
 
-  // Super Admin Stats
+  // Super Admin Analytics
   const totalRegistered = allDelegates.length;
   const totalPresent = allDelegates.filter(d => d.isPresent).length;
   const totalPending = totalRegistered - totalPresent;
   const totalCashCollected = allDelegates.filter(d => d.isPresent && d.isCash).length * 150;
   const totalOnlinePaid = allDelegates.filter(d => d.isPresent && !d.isCash).length;
 
-  // Volunteer Breakdown
-  const donaCheckins = allDelegates.filter(d => d.isPresent && d.checkedInBy === 'Dona George');
+  const donaCheckins = allDelegates.filter(d => d.isPresent && (d.checkedInBy === 'Dona George' || d.checkedInBy === 'Dona'));
   const donaCash = donaCheckins.filter(d => d.isCash).length * 150;
 
-  const nehaCheckins = allDelegates.filter(d => d.isPresent && d.checkedInBy === 'Neha Miriam Jose');
+  const nehaCheckins = allDelegates.filter(d => d.isPresent && (d.checkedInBy === 'Neha Miriam Jose' || d.checkedInBy === 'Neha'));
   const nehaCash = nehaCheckins.filter(d => d.isCash).length * 150;
 
-  const otherCheckins = allDelegates.filter(d => d.isPresent && d.checkedInBy !== 'Dona George' && d.checkedInBy !== 'Neha Miriam Jose');
+  const otherCheckins = allDelegates.filter(d => d.isPresent && !d.checkedInBy?.includes('Dona') && !d.checkedInBy?.includes('Neha'));
   const otherCash = otherCheckins.filter(d => d.isCash).length * 150;
 
-  // Filtered list for Admin Report
   const adminFilteredList = allDelegates.filter(item => {
     const matchSearch = 
       item.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -389,17 +400,17 @@ export default function ContinuousScanner({ onClose }) {
 
     if (adminFilter === 'present') return item.isPresent;
     if (adminFilter === 'pending') return !item.isPresent;
-    if (adminFilter === 'dona') return item.isPresent && item.checkedInBy === 'Dona George';
-    if (adminFilter === 'neha') return item.isPresent && item.checkedInBy === 'Neha Miriam Jose';
+    if (adminFilter === 'dona') return item.isPresent && item.checkedInBy?.includes('Dona');
+    if (adminFilter === 'neha') return item.isPresent && item.checkedInBy?.includes('Neha');
     return true;
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d0705] text-white flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-[#0d0705] text-white flex flex-col overflow-hidden font-sans">
       
-      {/* Top Header Navigation */}
+      {/* 1. Header Bar */}
       <header className="bg-[#1c120c] border-b border-[#d4af37]/30 px-3.5 sm:px-6 py-2.5 flex items-center justify-between shadow-xl flex-shrink-0">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-orange-gradient flex items-center justify-center font-bold text-white shadow-md">
             <Zap className="w-4 h-4" />
           </div>
@@ -410,24 +421,24 @@ export default function ContinuousScanner({ onClose }) {
             <div className="flex items-center gap-2 text-[10px]">
               <span className="text-green-400 font-semibold flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                Live Cloud Sync
+                Cloud Synced
               </span>
-              {lastSyncTime && <span className="text-[#f4ece1]/50">• Synced {lastSyncTime}</span>}
+              {lastSyncTime && <span className="text-[#f4ece1]/50 hidden sm:inline">• Synced {lastSyncTime}</span>}
             </div>
           </div>
         </div>
 
-        {/* Top Controls: Volunteer Switcher & View Mode */}
+        {/* Volunteer Switcher & Navigation Tabs */}
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* Active Volunteer Selector */}
+          {/* Volunteer Toggle Buttons */}
           <div className="flex items-center bg-[#140b07] p-1 rounded-xl border border-[#d4af37]/30 text-xs">
-            <span className="text-[10px] text-[#f4ece1]/60 px-2 hidden sm:inline">Volunteer:</span>
+            <span className="text-[10px] text-[#f4ece1]/60 px-1.5 hidden md:inline">Desk:</span>
             {VOLUNTEERS.map(v => (
               <button
                 key={v.id}
                 onClick={() => handleVolunteerChange(v.name)}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all text-xs cursor-pointer ${
                   activeVolunteer === v.name
                     ? 'bg-orange-gradient text-white shadow-md'
                     : 'text-[#f4ece1]/70 hover:text-white'
@@ -438,11 +449,11 @@ export default function ContinuousScanner({ onClose }) {
             ))}
           </div>
 
-          {/* Mode Switch Tabs: Scanner / Super Admin Report */}
+          {/* View Tab Switch */}
           <div className="flex bg-[#140b07] p-1 rounded-xl border border-[#d4af37]/30 text-xs">
             <button
               onClick={() => setViewTab('scanner')}
-              className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer ${
                 viewTab === 'scanner'
                   ? 'bg-[#d96b27] text-white shadow-md'
                   : 'text-[#f4ece1]/70 hover:text-white'
@@ -453,7 +464,7 @@ export default function ContinuousScanner({ onClose }) {
             </button>
             <button
               onClick={() => setViewTab('admin')}
-              className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer ${
                 viewTab === 'admin'
                   ? 'bg-[#d96b27] text-white shadow-md'
                   : 'text-[#f4ece1]/70 hover:text-white'
@@ -464,17 +475,17 @@ export default function ContinuousScanner({ onClose }) {
             </button>
           </div>
 
-          {/* Manual Refresh */}
+          {/* Manual Refresh Button */}
           <button
             onClick={fetchLiveSheetData}
             disabled={isLoadingSheet}
             className="p-2 rounded-xl bg-[#2a1a12] border border-[#d4af37]/30 text-[#e5c158] hover:bg-[#3d2417] text-xs font-bold transition-all cursor-pointer"
-            title="Refresh Live Data from Google Sheets"
+            title="Refresh from Google Sheets"
           >
             <RefreshCw className={`w-4 h-4 ${isLoadingSheet ? 'animate-spin text-[#d96b27]' : ''}`} />
           </button>
 
-          {/* Close Scanner */}
+          {/* Close Desk */}
           <button
             onClick={onClose}
             className="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
@@ -484,32 +495,33 @@ export default function ContinuousScanner({ onClose }) {
         </div>
       </header>
 
-      {/* TAB 1: SCANNER DESK VIEW */}
+      {/* 2. SCANNER DESK VIEW (Clean, Uncongested Layout) */}
       {viewTab === 'scanner' && (
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
           
-          {/* Left Column: Fixed Non-Shrinking Camera + Cash Verification Action */}
-          <div className="lg:col-span-6 p-3.5 sm:p-5 flex flex-col space-y-3 overflow-y-auto border-r border-[#382015]">
+          {/* Left Column: Full-Height Clean Camera & Quick Search */}
+          <div className="lg:col-span-6 p-4 sm:p-6 flex flex-col space-y-4 overflow-y-auto border-r border-[#382015]">
             
             {/* Active Volunteer Banner */}
-            <div className="p-2.5 rounded-xl bg-[#1c120c] border border-[#d4af37]/30 flex items-center justify-between text-xs flex-shrink-0">
+            <div className="p-2.5 px-4 rounded-2xl bg-[#1c120c] border border-[#d4af37]/30 flex items-center justify-between text-xs flex-shrink-0">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-[#e5c158]" />
                 <span>Operating Desk: <strong className="text-[#e5c158]">{activeVolunteer}</strong></span>
               </div>
-              <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/30">
-                Ready to Scan
+              <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-2.5 py-0.5 rounded-full border border-green-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping"></span>
+                Scanner Live
               </span>
             </div>
 
-            {/* Rigid Fixed Height Camera Viewfinder (NEVER shrinks) */}
-            <div className="relative rounded-3xl overflow-hidden border-2 border-[#e5c158] bg-black shadow-2xl p-1 flex-shrink-0 w-full h-[320px] sm:h-[380px]">
+            {/* Rigid Large Non-Shrinking Camera Viewfinder */}
+            <div className="relative rounded-3xl overflow-hidden border-2 border-[#e5c158] bg-black shadow-2xl p-1 flex-shrink-0 w-full h-[340px] sm:h-[420px]">
               <div id="continuous-qr-reader" className="w-full h-full bg-black rounded-2xl overflow-hidden flex items-center justify-center"></div>
               
-              {/* Guide overlay */}
+              {/* Guide Overlay */}
               <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
-                <div className="w-56 h-56 sm:w-64 sm:h-64 border-2 border-dashed border-[#e5c158] rounded-3xl animate-pulse shadow-2xl"></div>
-                <p className="text-[11px] font-bold text-white bg-black/70 px-3.5 py-1 rounded-full mt-3 backdrop-blur-md border border-[#e5c158]/30">
+                <div className="w-60 h-60 sm:w-68 sm:h-68 border-2 border-dashed border-[#e5c158] rounded-3xl animate-pulse shadow-2xl"></div>
+                <p className="text-[11px] font-bold text-white bg-black/75 px-4 py-1.5 rounded-full mt-3 backdrop-blur-md border border-[#e5c158]/30">
                   Aim at participant's QR code
                 </p>
               </div>
@@ -521,125 +533,21 @@ export default function ContinuousScanner({ onClose }) {
               </div>
             )}
 
-            {/* SCAN RESULT & CASH COLLECTION REMINDER ACTION CARD */}
-            {pendingScan && (
-              <div className={`p-4 rounded-2xl border-2 shadow-2xl transition-all animate-in zoom-in-95 flex-shrink-0 space-y-3 ${
-                scanStatus === 'duplicate'
-                  ? 'bg-red-500/20 border-red-500 text-white'
-                  : scanStatus === 'success'
-                  ? 'bg-green-500/20 border-green-500 text-white'
-                  : 'bg-amber-500/15 border-2 border-amber-500 text-white'
-              }`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    {scanStatus === 'duplicate' ? (
-                      <AlertTriangle className="w-7 h-7 text-red-400 flex-shrink-0" />
-                    ) : scanStatus === 'success' ? (
-                      <CheckCircle2 className="w-7 h-7 text-green-400 flex-shrink-0" />
-                    ) : (
-                      <Banknote className="w-7 h-7 text-amber-400 flex-shrink-0" />
-                    )}
-                    <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-black/40">
-                        {scanStatus === 'duplicate'
-                          ? '⚠️ ALREADY CHECKED IN'
-                          : scanStatus === 'success'
-                          ? '✅ CHECKED IN CONFIRMED'
-                          : '⚡ VERIFY & COLLECT FEE'}
-                      </span>
-                      <h3 className="text-xl font-black text-white mt-1">
-                        {pendingScan.fullName}
-                      </h3>
-                    </div>
-                  </div>
-
-                  <span className="font-mono text-xs font-bold text-[#e5c158] bg-black/50 px-2.5 py-1 rounded-lg">
-                    {pendingScan.ticketId}
-                  </span>
-                </div>
-
-                {/* Delegate Details */}
-                <div className="pt-2 border-t border-white/20 grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-white/70 text-[10px] uppercase">Ward / House</span>
-                    <p className="font-bold text-white truncate">{pendingScan.parish} • {pendingScan.houseName}</p>
-                  </div>
-
-                  <div>
-                    <span className="text-white/70 text-[10px] uppercase">Phone</span>
-                    <p className="font-mono font-bold text-white">{pendingScan.phone || '—'}</p>
-                  </div>
-                </div>
-
-                {/* Cash Collection Requirement Box */}
-                {scanStatus === 'pending_confirm' && (
-                  <div className="p-3 rounded-xl bg-amber-500/20 border border-amber-500/50 space-y-2">
-                    {pendingScan.isCash ? (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-extrabold text-amber-300">
-                            💵 COLLECT ₹150 SPOT CASH
-                          </p>
-                          <p className="text-[10px] text-[#f4ece1]/80 mt-0.5">
-                            Please collect ₹150 cash from delegate before confirming.
-                          </p>
-                        </div>
-                        <span className="text-lg font-black text-amber-300 bg-black/40 px-3 py-1 rounded-xl">
-                          ₹150
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-green-400 font-bold text-xs">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Online Payment Verified (₹0 to collect)</span>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={handleConfirmCheckin}
-                      disabled={isSubmitting}
-                      className="w-full py-3.5 px-4 rounded-xl bg-green-600 hover:bg-green-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span>
-                        {pendingScan.isCash
-                          ? `✅ Confirm ₹150 Cash Received & Check In (by ${activeVolunteer})`
-                          : `✅ Confirm Check-In & Hand Badge (by ${activeVolunteer})`}
-                      </span>
-                    </button>
-                  </div>
-                )}
-
-                {scanStatus === 'duplicate' && (
-                  <div className="p-2.5 rounded-xl bg-black/40 text-[11px] text-red-200 font-semibold space-y-1">
-                    <p>⛔ <strong>Already Checked In</strong> at {pendingScan.checkedInTime || 'Earlier'} by {pendingScan.checkedInBy || 'Desk'}.</p>
-                    <p className="text-[10px] text-white/70">Do not issue duplicate badge unless verified!</p>
-                  </div>
-                )}
-
-                {scanStatus === 'success' && (
-                  <div className="p-2.5 rounded-xl bg-green-500/20 text-green-300 text-xs font-bold flex items-center justify-between">
-                    <span>Marked Present by {pendingScan.checkedInBy} at {pendingScan.checkedInTime}</span>
-                    <span className="text-[10px] bg-black/40 px-2 py-0.5 rounded">Ready for next</span>
-                  </div>
-                )}
-
+            {/* Quick Manual Search Input */}
+            <form onSubmit={handleManualSearchCheckin} className="flex gap-2 flex-shrink-0 pt-1">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Or type Name / Ticket ID / Phone"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1c120c] border border-[#d4af37]/40 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-[#d96b27]"
+                />
               </div>
-            )}
-
-            {/* Manual ID / Name Search Entry */}
-            <form onSubmit={handleManualSearchCheckin} className="flex gap-2 flex-shrink-0">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Or type Name / Ticket ID / Phone"
-                className="flex-1 px-4 py-2.5 rounded-xl bg-[#1c120c] border border-[#d4af37]/40 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-[#d96b27]"
-              />
               <button
                 type="submit"
-                className="px-4 py-2.5 rounded-xl bg-orange-gradient text-white font-bold text-xs shadow-md border border-[#e5c158]/50 active:scale-95 transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-orange-gradient text-white font-bold text-xs shadow-md border border-[#e5c158]/50 active:scale-95 transition-all cursor-pointer"
               >
                 Find &amp; Check In
               </button>
@@ -647,12 +555,12 @@ export default function ContinuousScanner({ onClose }) {
 
           </div>
 
-          {/* Right Column: Live Desk Attendance Feed (Synced across all phones) */}
-          <div className="lg:col-span-6 p-3.5 sm:p-5 flex flex-col overflow-hidden bg-[#140b07]">
+          {/* Right Column: Live Desk Roster & Real-Time Stats */}
+          <div className="lg:col-span-6 p-4 sm:p-6 flex flex-col overflow-hidden bg-[#140b07]">
             
-            {/* Live Stats Bar */}
-            <div className="grid grid-cols-2 gap-3 mb-3 flex-shrink-0">
-              <div className="bg-[#1c120c] p-3 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between">
+            {/* Real-Time Cloud Stats */}
+            <div className="grid grid-cols-2 gap-3 mb-4 flex-shrink-0">
+              <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase text-[#e5c158]">Total Present</p>
                   <p className="text-2xl font-black text-white">{totalPresent} <span className="text-xs text-gray-400 font-normal">/ {totalRegistered}</span></p>
@@ -660,7 +568,7 @@ export default function ContinuousScanner({ onClose }) {
                 <Users className="w-6 h-6 text-[#e5c158]" />
               </div>
 
-              <div className="bg-[#1c120c] p-3 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between">
+              <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase text-[#e5c158]">Cash Collected</p>
                   <p className="text-2xl font-black text-amber-400">₹{totalCashCollected}</p>
@@ -673,12 +581,12 @@ export default function ContinuousScanner({ onClose }) {
             <div className="grid grid-cols-2 gap-2 mb-3 flex-shrink-0 text-xs">
               <div className="p-2.5 rounded-xl bg-[#1c120c] border border-blue-500/30">
                 <p className="text-[10px] text-blue-400 font-bold">👩 Dona George</p>
-                <p className="font-extrabold text-white mt-0.5">{donaCheckins.length} Present • <span className="text-amber-300">₹{donaCash}</span></p>
+                <p className="font-extrabold text-white mt-0.5">{donaCheckins.length} Admitted • <span className="text-amber-300">₹{donaCash}</span></p>
               </div>
 
               <div className="p-2.5 rounded-xl bg-[#1c120c] border border-purple-500/30">
                 <p className="text-[10px] text-purple-400 font-bold">👩 Neha Miriam</p>
-                <p className="font-extrabold text-white mt-0.5">{nehaCheckins.length} Present • <span className="text-amber-300">₹{nehaCash}</span></p>
+                <p className="font-extrabold text-white mt-0.5">{nehaCheckins.length} Admitted • <span className="text-amber-300">₹{nehaCash}</span></p>
               </div>
             </div>
 
@@ -686,12 +594,7 @@ export default function ContinuousScanner({ onClose }) {
               <h4 className="font-cinzel text-xs font-bold text-[#e5c158] uppercase tracking-wider">
                 Live Cloud Feed ({totalPresent} Checked In)
               </h4>
-              <button
-                onClick={fetchLiveSheetData}
-                className="text-[10px] text-green-400 hover:underline flex items-center gap-1 font-semibold"
-              >
-                <RefreshCw className="w-3 h-3" /> Sync Now
-              </button>
+              <span className="text-[10px] text-[#f4ece1]/60">Synced across all devices</span>
             </div>
 
             {/* Live Feed List */}
@@ -699,7 +602,7 @@ export default function ContinuousScanner({ onClose }) {
               {allDelegates.filter(d => d.isPresent).length === 0 ? (
                 <div className="text-center py-12 text-gray-500 text-xs space-y-2">
                   <Camera className="w-8 h-8 mx-auto text-gray-600 animate-bounce" />
-                  <p>No delegates checked in yet today.</p>
+                  <p>No delegates checked in yet.</p>
                   <p className="text-[10px]">Aim camera at any QR code to begin check-in!</p>
                 </div>
               ) : (
@@ -741,11 +644,10 @@ export default function ContinuousScanner({ onClose }) {
         </div>
       )}
 
-      {/* TAB 2: SUPER ADMIN BREAKDOWN REPORT */}
+      {/* TAB 3: SUPER ADMIN REPORT DASHBOARD */}
       {viewTab === 'admin' && (
         <div className="flex-1 p-4 sm:p-8 overflow-y-auto bg-[#140b07] space-y-6">
           
-          {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#382015] pb-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-[#d96b27]">Master Administrative Report</span>
@@ -758,7 +660,7 @@ export default function ContinuousScanner({ onClose }) {
               <button
                 onClick={fetchLiveSheetData}
                 disabled={isLoadingSheet}
-                className="px-4 py-2 rounded-xl bg-[#2a1a12] border border-[#d4af37]/40 text-[#e5c158] hover:bg-[#3d2417] text-xs font-bold transition-all flex items-center gap-2"
+                className="px-4 py-2 rounded-xl bg-[#2a1a12] border border-[#d4af37]/40 text-[#e5c158] hover:bg-[#3d2417] text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${isLoadingSheet ? 'animate-spin text-[#d96b27]' : ''}`} />
                 <span>Sync with Google Sheets</span>
@@ -766,7 +668,7 @@ export default function ContinuousScanner({ onClose }) {
             </div>
           </div>
 
-          {/* 4 Grand Summary Stat Cards */}
+          {/* Grand Summary Stat Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 rounded-2xl bg-[#1c120c] border border-[#d4af37]/30 space-y-1">
               <p className="text-[10px] uppercase font-bold text-[#e5c158]">Total Registered</p>
@@ -777,23 +679,23 @@ export default function ContinuousScanner({ onClose }) {
             <div className="p-4 rounded-2xl bg-[#1c120c] border border-green-500/40 space-y-1">
               <p className="text-[10px] uppercase font-bold text-green-400">Total Present</p>
               <p className="text-3xl font-black text-green-400">{totalPresent}</p>
-              <p className="text-[10px] text-green-300/80">{totalRegistered > 0 ? Math.round((totalPresent / totalRegistered) * 100) : 0}% Turnout Rate</p>
+              <p className="text-[10px] text-green-300/80">{totalRegistered > 0 ? Math.round((totalPresent / totalRegistered) * 100) : 0}% Turnout</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-[#1c120c] border border-amber-500/40 space-y-1">
-              <p className="text-[10px] uppercase font-bold text-amber-300">Total Spot Cash Collected</p>
+              <p className="text-[10px] uppercase font-bold text-amber-300">Total Spot Cash</p>
               <p className="text-3xl font-black text-amber-300">₹{totalCashCollected}</p>
-              <p className="text-[10px] text-[#f4ece1]/60">{totalCashCollected / 150} Spot Cash Delegates</p>
+              <p className="text-[10px] text-[#f4ece1]/60">{totalCashCollected / 150} Cash Delegates</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-[#1c120c] border border-red-500/30 space-y-1">
               <p className="text-[10px] uppercase font-bold text-red-400">Pending Arrival</p>
               <p className="text-3xl font-black text-white">{totalPending}</p>
-              <p className="text-[10px] text-[#f4ece1]/60">Yet to Check In</p>
+              <p className="text-[10px] text-[#f4ece1]/60">Yet to Arrive</p>
             </div>
           </div>
 
-          {/* VOLUNTEER BREAKDOWN SECTION */}
+          {/* Volunteer Breakdown Section */}
           <div className="bg-[#1c120c] p-6 rounded-3xl border border-[#d4af37]/30 space-y-4">
             <h3 className="font-cinzel text-lg font-bold text-gold-gradient flex items-center gap-2">
               <Award className="w-5 h-5 text-[#e5c158]" />
@@ -802,7 +704,6 @@ export default function ContinuousScanner({ onClose }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* Volunteer 1: Dona George */}
               <div className="p-5 rounded-2xl bg-[#140b07] border-2 border-blue-500/40 space-y-3 shadow-lg">
                 <div className="flex justify-between items-start">
                   <div>
@@ -813,9 +714,9 @@ export default function ContinuousScanner({ onClose }) {
                   </div>
                   <button
                     onClick={() => setAdminFilter('dona')}
-                    className="text-xs font-bold text-blue-300 hover:text-white underline"
+                    className="text-xs font-bold text-blue-300 hover:text-white underline cursor-pointer"
                   >
-                    View Her List →
+                    View Her List ({donaCheckins.length}) →
                   </button>
                 </div>
 
@@ -832,7 +733,6 @@ export default function ContinuousScanner({ onClose }) {
                 </div>
               </div>
 
-              {/* Volunteer 2: Neha Miriam Jose */}
               <div className="p-5 rounded-2xl bg-[#140b07] border-2 border-purple-500/40 space-y-3 shadow-lg">
                 <div className="flex justify-between items-start">
                   <div>
@@ -843,9 +743,9 @@ export default function ContinuousScanner({ onClose }) {
                   </div>
                   <button
                     onClick={() => setAdminFilter('neha')}
-                    className="text-xs font-bold text-purple-300 hover:text-white underline"
+                    className="text-xs font-bold text-purple-300 hover:text-white underline cursor-pointer"
                   >
-                    View Her List →
+                    View Her List ({nehaCheckins.length}) →
                   </button>
                 </div>
 
@@ -865,14 +765,12 @@ export default function ContinuousScanner({ onClose }) {
             </div>
           </div>
 
-          {/* Search & Filter Controls */}
+          {/* Filter Pills & Search */}
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-            
-            {/* Filter Pills */}
             <div className="flex flex-wrap gap-1.5 bg-[#1c120c] p-1.5 rounded-2xl border border-[#d4af37]/30 text-xs w-full sm:w-auto">
               <button
                 onClick={() => setAdminFilter('all')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                   adminFilter === 'all' ? 'bg-[#d96b27] text-white shadow-md' : 'text-[#f4ece1]/70 hover:text-white'
                 }`}
               >
@@ -880,7 +778,7 @@ export default function ContinuousScanner({ onClose }) {
               </button>
               <button
                 onClick={() => setAdminFilter('present')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                   adminFilter === 'present' ? 'bg-green-600 text-white shadow-md' : 'text-green-400 hover:text-white'
                 }`}
               >
@@ -888,7 +786,7 @@ export default function ContinuousScanner({ onClose }) {
               </button>
               <button
                 onClick={() => setAdminFilter('pending')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                   adminFilter === 'pending' ? 'bg-red-600 text-white shadow-md' : 'text-red-300 hover:text-white'
                 }`}
               >
@@ -896,7 +794,7 @@ export default function ContinuousScanner({ onClose }) {
               </button>
               <button
                 onClick={() => setAdminFilter('dona')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                   adminFilter === 'dona' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-300 hover:text-white'
                 }`}
               >
@@ -904,7 +802,7 @@ export default function ContinuousScanner({ onClose }) {
               </button>
               <button
                 onClick={() => setAdminFilter('neha')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                   adminFilter === 'neha' ? 'bg-purple-600 text-white shadow-md' : 'text-purple-300 hover:text-white'
                 }`}
               >
@@ -912,7 +810,6 @@ export default function ContinuousScanner({ onClose }) {
               </button>
             </div>
 
-            {/* Search Box */}
             <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 text-[#e5c158] absolute left-3.5 top-3" />
               <input
@@ -923,10 +820,9 @@ export default function ContinuousScanner({ onClose }) {
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1c120c] border border-[#d4af37]/30 text-white text-xs placeholder-gray-500 focus:outline-none focus:border-[#d96b27]"
               />
             </div>
-
           </div>
 
-          {/* Master Table List */}
+          {/* Master Table */}
           <div className="bg-[#1c120c] rounded-3xl border border-[#d4af37]/30 overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -935,9 +831,9 @@ export default function ContinuousScanner({ onClose }) {
                     <th className="py-3.5 px-4">Pass ID</th>
                     <th className="py-3.5 px-4">Delegate Name</th>
                     <th className="py-3.5 px-4">Ward / House</th>
-                    <th className="py-3.5 px-4">Phone Number</th>
+                    <th className="py-3.5 px-4">Phone</th>
                     <th className="py-3.5 px-4">Fee Mode</th>
-                    <th className="py-3.5 px-4">Attendance Status</th>
+                    <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4">Admitted By</th>
                   </tr>
                 </thead>
@@ -945,7 +841,7 @@ export default function ContinuousScanner({ onClose }) {
                   {adminFilteredList.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="py-10 text-center text-gray-500">
-                        No delegates match the selected filter or search.
+                        No delegates match the selected filter.
                       </td>
                     </tr>
                   ) : (
@@ -977,18 +873,13 @@ export default function ContinuousScanner({ onClose }) {
                               PRESENT ({item.checkedInTime})
                             </span>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-700/30 text-gray-400 border border-gray-600/30 inline-flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-700/30 text-gray-400 border border-gray-600/30">
                               Not Arrived
                             </span>
                           )}
                         </td>
                         <td className="py-3 px-4 font-medium text-blue-300">
-                          {item.isPresent ? (
-                            item.checkedInBy || 'Desk'
-                          ) : (
-                            '—'
-                          )}
+                          {item.isPresent ? (item.checkedInBy || 'Desk') : '—'}
                         </td>
                       </tr>
                     ))
@@ -998,6 +889,174 @@ export default function ContinuousScanner({ onClose }) {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* 4. INSTANT CENTERED POP-UP MODAL UPON SCANNING (No Scrolling Required!) */}
+      {activeModalData && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="relative max-w-md w-full bg-[#1c120c] rounded-3xl border-2 border-[#d4af37] shadow-2xl overflow-hidden text-white animate-in zoom-in-95 duration-150">
+            
+            {/* Modal Header */}
+            <div className={`p-4 text-center border-b flex items-center justify-between px-6 ${
+              modalType === 'locked_duplicate'
+                ? 'bg-red-950/80 border-red-500/40 text-red-300'
+                : modalType === 'success_done'
+                ? 'bg-green-950/80 border-green-500/40 text-green-300'
+                : 'bg-orange-gradient border-[#e5c158]/50 text-white'
+            }`}>
+              <div className="flex items-center gap-2">
+                {modalType === 'locked_duplicate' ? (
+                  <Lock className="w-5 h-5 text-red-400" />
+                ) : modalType === 'success_done' ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                ) : (
+                  <ShieldCheck className="w-5 h-5 text-[#ffe8aa]" />
+                )}
+                <span className="font-cinzel text-xs sm:text-sm font-bold tracking-wider uppercase">
+                  {modalType === 'locked_duplicate'
+                    ? '⛔ Locked: Already Admitted'
+                    : modalType === 'success_done'
+                    ? '🎉 Attendance Confirmed'
+                    : '⚡ Delegate Check-In & Fee'}
+                </span>
+              </div>
+
+              <button
+                onClick={handleCloseModal}
+                className="p-1 rounded-full hover:bg-black/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 space-y-4">
+              
+              {/* Delegate Details Card */}
+              <div className="bg-[#140b07] p-4 rounded-2xl border border-[#d4af37]/30 space-y-2">
+                <div className="flex justify-between items-start border-b border-[#382015] pb-2.5">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-[#e5c158]">Delegate Name</span>
+                    <h3 className="text-xl font-bold text-white mt-0.5">{activeModalData.fullName}</h3>
+                  </div>
+                  <span className="font-mono text-xs font-bold text-[#e5c158] bg-[#2a1a12] px-2.5 py-1 rounded-lg border border-[#d4af37]/30">
+                    {activeModalData.ticketId}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                  <div>
+                    <span className="text-white/60 text-[10px] uppercase">Ward Number</span>
+                    <p className="font-bold text-[#e5c158]">{activeModalData.parish}</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60 text-[10px] uppercase">House Name</span>
+                    <p className="font-bold text-white truncate">{activeModalData.houseName}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-white/60 text-[10px] uppercase">Phone Number</span>
+                    <p className="font-mono font-medium text-white">{activeModalData.phone || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CASE A: LOCKED DUPLICATE ERROR POPUP */}
+              {modalType === 'locked_duplicate' && (
+                <div className="p-4 rounded-2xl bg-red-500/20 border-2 border-red-500 text-red-200 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-red-300 text-sm">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                    <span>ALREADY VERIFIED &amp; ADMITTED!</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    This ticket pass was <strong>ALREADY CHECKED IN</strong> at <strong>{activeModalData.checkedInTime}</strong> by <strong>{activeModalData.checkedInBy || 'Volunteer'}</strong>.
+                  </p>
+                  <p className="text-[11px] text-red-300/80 font-bold bg-black/40 p-2 rounded-lg">
+                    🔒 QR code is LOCKED. Do not issue a second delegate badge!
+                  </p>
+                </div>
+              )}
+
+              {/* CASE B: CASH CONFIRMATION POPUP */}
+              {modalType === 'confirm_cash' && (
+                <div className="p-4 rounded-2xl bg-amber-500/20 border-2 border-amber-500 text-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black text-amber-300 uppercase tracking-wider">
+                        💵 COLLECT ₹150 SPOT CASH
+                      </p>
+                      <p className="text-[11px] text-[#f4ece1]/80 mt-0.5">
+                        Collect ₹150 cash from delegate before confirming.
+                      </p>
+                    </div>
+                    <span className="text-2xl font-black text-amber-300 bg-black/50 px-3 py-1.5 rounded-xl border border-amber-500/40">
+                      ₹150
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmCheckin}
+                    disabled={isSubmitting}
+                    className="w-full py-4 px-4 rounded-2xl bg-green-600 hover:bg-green-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>
+                      {isSubmitting
+                        ? 'Recording...'
+                        : `Confirm ₹150 Received & Check In (by ${activeVolunteer})`}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* CASE C: ONLINE PAID CONFIRMATION POPUP */}
+              {modalType === 'confirm_online' && (
+                <div className="p-4 rounded-2xl bg-green-500/20 border-2 border-green-500 text-white space-y-3">
+                  <div className="flex items-center gap-2 text-green-400 font-bold text-xs">
+                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                    <span>Online Payment Verified (₹0 to collect from delegate)</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmCheckin}
+                    disabled={isSubmitting}
+                    className="w-full py-4 px-4 rounded-2xl bg-green-600 hover:bg-green-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>
+                      {isSubmitting
+                        ? 'Recording...'
+                        : `Confirm & Hand Badge (by ${activeVolunteer})`}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* CASE D: SUCCESS CONFIRMATION STATE */}
+              {modalType === 'success_done' && (
+                <div className="p-4 rounded-2xl bg-green-500/20 border-2 border-green-500 text-green-300 text-center space-y-1">
+                  <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto" />
+                  <h4 className="text-base font-bold text-white">Admitted Successfully!</h4>
+                  <p className="text-xs text-green-300">
+                    Checked in by <strong>{activeModalData.checkedInBy}</strong> at {activeModalData.checkedInTime}
+                  </p>
+                </div>
+              )}
+
+              {/* Cancel / Scan Next Button */}
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="w-full py-2.5 rounded-xl bg-[#2a1a12] hover:bg-[#382015] text-[#f4ece1]/80 font-bold text-xs border border-[#d4af37]/30 transition-colors cursor-pointer"
+              >
+                {modalType === 'locked_duplicate' ? 'Close & Scan Next' : 'Cancel / Close'}
+              </button>
+
+            </div>
+
+          </div>
         </div>
       )}
 
