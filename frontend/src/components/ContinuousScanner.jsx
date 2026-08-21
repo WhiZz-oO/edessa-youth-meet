@@ -27,6 +27,7 @@ export default function ContinuousScanner({ onClose }) {
   const [selectedDelegate, setSelectedDelegate] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState(null); // 'confirm' | 'locked' | 'success'
+  const [selectedPaymentMode, setSelectedPaymentMode] = useState('cash'); // 'cash' | 'upi'
 
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,10 +82,18 @@ export default function ContinuousScanner({ onClose }) {
             checkedInTime = match ? match[1].replace(/by.*|•.*/i, '').trim() : 'Checked In';
           }
 
-          const isCash = !paymentMode.toLowerCase().includes('gpay') && 
-                         !paymentMode.toLowerCase().includes('upi') && 
-                         !paymentMode.toLowerCase().includes('google') &&
-                         !paymentMode.toLowerCase().includes('online');
+          let isCash = !paymentMode.toLowerCase().includes('gpay') && 
+                       !paymentMode.toLowerCase().includes('upi') && 
+                       !paymentMode.toLowerCase().includes('google') &&
+                       !paymentMode.toLowerCase().includes('online');
+          
+          if (isPresent) {
+            if (attendanceRaw.toLowerCase().includes('upi') || attendanceRaw.toLowerCase().includes('online') || attendanceRaw.toLowerCase().includes('gpay')) {
+              isCash = false;
+            } else if (attendanceRaw.toLowerCase().includes('spot cash') || attendanceRaw.toLowerCase().includes('cash')) {
+              isCash = true;
+            }
+          }
 
           return {
             rowId: idx + 2,
@@ -156,6 +165,7 @@ export default function ContinuousScanner({ onClose }) {
   // Open Pop-up Modal when clicking a participant
   const handleOpenCheckinModal = (delegate) => {
     setSelectedDelegate(delegate);
+    setSelectedPaymentMode(delegate.isCash ? 'cash' : 'upi');
     if (delegate.isPresent) {
       playBeep(false);
       setModalState('locked');
@@ -165,13 +175,15 @@ export default function ContinuousScanner({ onClose }) {
     }
   };
 
-  // Confirm Check-in & Record in Cloud
+  // Confirm Check-in & Record in Cloud (with chosen payment mode)
   const handleConfirmCheckin = async () => {
     if (!selectedDelegate) return;
     setIsSubmitting(true);
 
+    const isCashPayment = selectedPaymentMode === 'cash';
+    const paymentLabel = isCashPayment ? 'Spot Cash' : 'UPI';
     const checkinTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-    const formattedAttendance = `${checkinTime} • ${activeVolunteer}`;
+    const formattedAttendance = `${checkinTime} • ${activeVolunteer} • ${paymentLabel}`;
 
     // Optimistic UI update
     setAllDelegates(prev => prev.map(d => {
@@ -179,6 +191,8 @@ export default function ContinuousScanner({ onClose }) {
         return {
           ...d,
           isPresent: true,
+          isCash: isCashPayment,
+          paymentMode: isCashPayment ? 'Spot Cash (Pay at Desk)' : 'Google Pay / UPI (Online)',
           checkedInBy: activeVolunteer,
           checkedInTime: checkinTime,
           attendanceRaw: `PRESENT (${formattedAttendance})`
@@ -191,6 +205,8 @@ export default function ContinuousScanner({ onClose }) {
     setSelectedDelegate(prev => ({
       ...prev,
       isPresent: true,
+      isCash: isCashPayment,
+      paymentMode: isCashPayment ? 'Spot Cash (Pay at Desk)' : 'Google Pay / UPI (Online)',
       checkedInBy: activeVolunteer,
       checkedInTime: checkinTime,
     }));
@@ -1045,63 +1061,107 @@ export default function ContinuousScanner({ onClose }) {
                 </div>
               )}
 
-              {/* CASE B: SPOT CASH CONFIRMATION */}
-              {modalState === 'confirm' && selectedDelegate.isCash && (
-                <div className="p-4 rounded-2xl bg-amber-500/20 border-2 border-amber-500 text-white space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-black text-amber-300 uppercase tracking-wider">
-                        💵 COLLECT ₹150 SPOT CASH
-                      </p>
-                      <p className="text-[11px] text-[#f4ece1]/80 mt-0.5">
-                        Collect ₹150 physical cash from delegate before confirming.
-                      </p>
-                    </div>
-                    <span className="text-2xl font-black text-amber-300 bg-black/50 px-3 py-1.5 rounded-xl border border-amber-500/40">
-                      ₹150
-                    </span>
-                  </div>
+              {/* CASE B: PAYMENT METHOD SELECTOR & CONFIRMATION */}
+              {modalState === 'confirm' && (
+                <div className="space-y-3.5">
+                  
+                  {/* Payment Mode Toggle Buttons */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-[#e5c158] uppercase tracking-wider">
+                      Payment Mode at Desk:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 bg-[#140b07] p-1 rounded-2xl border border-[#d4af37]/30">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPaymentMode('cash')}
+                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          selectedPaymentMode === 'cash'
+                            ? 'bg-amber-500 text-black shadow-lg font-black'
+                            : 'text-[#f4ece1]/70 hover:text-white'
+                        }`}
+                      >
+                        <Banknote className="w-4 h-4" />
+                        <span>💵 Spot Cash (₹150)</span>
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={handleConfirmCheckin}
-                    disabled={isSubmitting}
-                    className="w-full py-4 px-4 rounded-2xl bg-green-600 hover:bg-green-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span>
-                      {isSubmitting
-                        ? 'Recording...'
-                        : `Confirm ₹150 Received & Check In (by ${activeVolunteer})`}
-                    </span>
-                  </button>
-                </div>
-              )}
-
-              {/* CASE C: ONLINE UPI VERIFICATION */}
-              {modalState === 'confirm' && !selectedDelegate.isCash && (
-                <div className="p-4 rounded-2xl bg-blue-500/20 border-2 border-blue-500 text-white space-y-3">
-                  <div className="flex items-center gap-2 text-blue-300 font-bold text-xs">
-                    <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-blue-400" />
-                    <div>
-                      <p className="text-sm font-extrabold text-blue-300">📱 Already Paid Online via UPI</p>
-                      <p className="text-[10px] text-[#f4ece1]/70 mt-0.5">₹150 received in Church Bank Account. ₹0 to collect at desk.</p>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPaymentMode('upi')}
+                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          selectedPaymentMode === 'upi'
+                            ? 'bg-blue-600 text-white shadow-lg font-black'
+                            : 'text-[#f4ece1]/70 hover:text-white'
+                        }`}
+                      >
+                        <Smartphone className="w-4 h-4" />
+                        <span>📱 UPI / GPay (₹150)</span>
+                      </button>
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleConfirmCheckin}
-                    disabled={isSubmitting}
-                    className="w-full py-4 px-4 rounded-2xl bg-green-600 hover:bg-green-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span>
-                      {isSubmitting
-                        ? 'Recording...'
-                        : `Confirm & Hand Delegate Badge (by ${activeVolunteer})`}
-                    </span>
-                  </button>
+                  {/* Payment Action Box */}
+                  {selectedPaymentMode === 'cash' ? (
+                    <div className="p-4 rounded-2xl bg-amber-500/20 border-2 border-amber-500 text-white space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-black text-amber-300 uppercase tracking-wider">
+                            💵 COLLECT ₹150 SPOT CASH
+                          </p>
+                          <p className="text-[11px] text-[#f4ece1]/80 mt-0.5">
+                            Collect ₹150 physical currency from delegate before confirming.
+                          </p>
+                        </div>
+                        <span className="text-2xl font-black text-amber-300 bg-black/50 px-3 py-1.5 rounded-xl border border-amber-500/40">
+                          ₹150
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleConfirmCheckin}
+                        disabled={isSubmitting}
+                        className="w-full py-4 px-4 rounded-2xl bg-green-600 hover:bg-green-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span>
+                          {isSubmitting
+                            ? 'Recording...'
+                            : `Confirm ₹150 Cash Received & Check In (by ${activeVolunteer})`}
+                        </span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-blue-500/20 border-2 border-blue-500 text-white space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-black text-blue-300 uppercase tracking-wider">
+                            📱 VERIFY ₹150 UPI / GPAY PAYMENT
+                          </p>
+                          <p className="text-[11px] text-[#f4ece1]/80 mt-0.5">
+                            Delegate scanned QR & sent ₹150 to church bank account.
+                          </p>
+                        </div>
+                        <span className="text-2xl font-black text-blue-400 bg-black/50 px-3 py-1.5 rounded-xl border border-blue-500/40">
+                          ₹150
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleConfirmCheckin}
+                        disabled={isSubmitting}
+                        className="w-full py-4 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span>
+                          {isSubmitting
+                            ? 'Recording...'
+                            : `Confirm ₹150 UPI Received & Check In (by ${activeVolunteer})`}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
                 </div>
               )}
 
