@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Sparkles, Award, Star } from 'lucide-react';
+import { Heart, Sparkles } from 'lucide-react';
 import { SPONSORS_DATA } from '../data/mockData';
 
 export default function Sponsors() {
@@ -24,18 +24,17 @@ export default function Sponsors() {
           </p>
         </div>
 
-        {/* 1. FIRST ROW: MAIN SPONSORS (Large Font & Prominent Cards) */}
+        {/* 1. FIRST ROW: TOP SPONSORS (Large Font, No 'Main Sponsor' text badge) */}
         {mainSponsors.length > 0 && (
-          <div className="mb-10 max-w-5xl mx-auto">
+          <div className="mb-8 sm:mb-10 max-w-5xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
               {mainSponsors.map((sponsor, idx) => (
                 <div
                   key={idx}
                   className="bg-[#2a1a12] text-white p-8 sm:p-10 rounded-3xl border-2 border-[#d4af37] shadow-2xl flex flex-col items-center justify-center text-center hover:border-[#d96b27] hover:scale-[1.02] transition-all group relative overflow-hidden"
                 >
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#d96b27]/20 border border-[#d96b27]/40 text-[#e5c158] text-[11px] font-bold uppercase tracking-widest mb-4">
-                    <Star className="w-3.5 h-3.5 fill-[#e5c158]" />
-                    Main Sponsor
+                  <div className="w-10 h-10 rounded-full bg-[#3d2417] border border-[#d4af37]/40 flex items-center justify-center mb-4 group-hover:bg-[#d96b27]/20 transition-colors">
+                    <Sparkles className="w-5 h-5 text-[#e5c158]" />
                   </div>
 
                   <h3 className="font-cinzel text-2xl sm:text-3xl font-black text-gold-gradient tracking-wide leading-tight">
@@ -47,7 +46,7 @@ export default function Sponsors() {
           </div>
         )}
 
-        {/* 2. OTHER SPONSORS (8 Perfectly Balanced Cards in 4-Column Grid) */}
+        {/* 2. OTHER SPONSORS (8 Cards in 4-Column Grid) */}
         {otherSponsors.length > 0 && (
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
