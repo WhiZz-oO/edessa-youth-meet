@@ -140,18 +140,21 @@ export const RESOURCE_PERSONS = [
 export const GALLERY_ITEMS = [];
 
 export const SPONSORS_DATA = {
-  titleSponsors: [
-    { name: "K K Thomas Kummannuparambil", category: "Sponsor" },
-    { name: "Tijo Vadakkel", category: "Sponsor" },
+  mainSponsors: [
+    { name: "K K Thomas Kummannuparambil", category: "Main Sponsor" },
+    { name: "Tijo Vadakkel", category: "Main Sponsor" },
+  ],
+  otherSponsors: [
     { name: "Bento George Kakkallil", category: "Sponsor" },
     { name: "Jerin Joy Parayadiyil", category: "Sponsor" },
-    { name: "Geethu Rose Tom Kalariyamackal", category: "Sponsor" },
-    { name: "Githin V Tom Kalariyamackal", category: "Sponsor" },
+    { name: "Geethu Rose V Kalariyamackal", category: "Sponsor" },
+    { name: "Githin Tom V Kalariyamackal", category: "Sponsor" },
     { name: "Alan Mathews Kocheettathottu", category: "Sponsor" },
     { name: "Joel Joseph Kocheettathottu", category: "Sponsor" },
     { name: "Jenna Jacob Kocheettathottu", category: "Sponsor" },
     { name: "Don George Vadakara", category: "Sponsor" },
   ],
+  titleSponsors: [],
   goldSponsors: [],
   silverSponsors: [],
 };
