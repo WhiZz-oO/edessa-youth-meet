@@ -82,15 +82,18 @@ export default function ContinuousScanner({ onClose }) {
             checkedInTime = match ? match[1].replace(/by.*|•.*/i, '').trim() : 'Checked In';
           }
 
-          let isCash = !paymentMode.toLowerCase().includes('gpay') && 
-                       !paymentMode.toLowerCase().includes('upi') && 
-                       !paymentMode.toLowerCase().includes('google') &&
-                       !paymentMode.toLowerCase().includes('online');
+          const isPrePaidOnline = paymentMode.toLowerCase().includes('gpay') || 
+                                  paymentMode.toLowerCase().includes('upi') || 
+                                  paymentMode.toLowerCase().includes('google') || 
+                                  paymentMode.toLowerCase().includes('online') || 
+                                  (txnRef && txnRef !== 'SPOT-CASH' && txnRef.length > 5);
+
+          let isCash = !isPrePaidOnline;
           
           if (isPresent) {
-            if (attendanceRaw.toLowerCase().includes('upi') || attendanceRaw.toLowerCase().includes('online') || attendanceRaw.toLowerCase().includes('gpay')) {
+            if (attendanceRaw.toLowerCase().includes('• upi') || attendanceRaw.toLowerCase().includes('(upi)')) {
               isCash = false;
-            } else if (attendanceRaw.toLowerCase().includes('spot cash') || attendanceRaw.toLowerCase().includes('cash')) {
+            } else if (attendanceRaw.toLowerCase().includes('• spot cash') || attendanceRaw.toLowerCase().includes('• cash') || attendanceRaw.toLowerCase().includes('(cash)')) {
               isCash = true;
             }
           }
@@ -104,7 +107,9 @@ export default function ContinuousScanner({ onClose }) {
             parish,
             age,
             email,
-            paymentMode: isCash ? 'Spot Cash (Pay at Desk)' : 'Google Pay / UPI (Online)',
+            txnRef: (txnRef && txnRef !== 'SPOT-CASH') ? txnRef : '',
+            paymentMode: isPrePaidOnline ? 'Pre-Paid Online (UPI)' : 'Spot Cash (Pay at Desk)',
+            isPrePaidOnline,
             isCash,
             isPresent,
             attendanceRaw,
@@ -165,7 +170,7 @@ export default function ContinuousScanner({ onClose }) {
   // Open Pop-up Modal when clicking a participant
   const handleOpenCheckinModal = (delegate) => {
     setSelectedDelegate(delegate);
-    setSelectedPaymentMode(delegate.isCash ? 'cash' : 'upi');
+    setSelectedPaymentMode(delegate.isPrePaidOnline ? 'upi' : (delegate.isCash ? 'cash' : 'upi'));
     if (delegate.isPresent) {
       playBeep(false);
       setModalState('locked');
@@ -631,10 +636,19 @@ export default function ContinuousScanner({ onClose }) {
                         {delegate.phone || '—'}
                       </span>
 
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                        delegate.isCash ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300'
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md flex items-center gap-1 ${
+                        delegate.isPrePaidOnline 
+                          ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                          : delegate.isCash 
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
+                          : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                       }`}>
-                        {delegate.isCash ? (
+                        {delegate.isPrePaidOnline ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-green-400" />
+                            <span>✅ Pre-Paid Online (₹0)</span>
+                          </>
+                        ) : delegate.isCash ? (
                           <>
                             <Banknote className="w-3 h-3" />
                             <span>💵 Spot Cash (₹150)</span>
@@ -642,7 +656,7 @@ export default function ContinuousScanner({ onClose }) {
                         ) : (
                           <>
                             <Smartphone className="w-3 h-3" />
-                            <span>📱 UPI Paid (Online)</span>
+                            <span>📱 Desk UPI (₹150)</span>
                           </>
                         )}
                       </span>
@@ -1061,14 +1075,59 @@ export default function ContinuousScanner({ onClose }) {
                 </div>
               )}
 
-              {/* CASE B: PAYMENT METHOD SELECTOR & CONFIRMATION */}
-              {modalState === 'confirm' && (
+              {/* CASE B: PRE-PAID ONLINE DELEGATE (ALREADY PAID EARLIER) */}
+              {modalState === 'confirm' && selectedDelegate.isPrePaidOnline && (
+                <div className="p-4 rounded-2xl bg-green-500/20 border-2 border-green-500 text-white space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase bg-green-500/30 text-green-300 px-2 py-0.5 rounded border border-green-400/40">
+                        ✅ PRE-PAID ONLINE (VERIFIED)
+                      </span>
+                      <h4 className="text-base font-black text-green-300 mt-1">
+                        Already Paid ₹150 via UPI
+                      </h4>
+                      <p className="text-[11px] text-[#f4ece1]/80 mt-0.5">
+                        Registration fee already credited to church bank account during pre-registration.
+                      </p>
+                      {selectedDelegate.txnRef && (
+                        <p className="text-[10px] font-mono text-green-300 font-bold mt-1 bg-black/40 px-2 py-1 rounded inline-block">
+                          UTR / Ref: {selectedDelegate.txnRef}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xl font-black text-green-400 bg-black/50 px-3 py-1.5 rounded-xl border border-green-500/40">
+                      ₹0 to Collect
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-black/30 border border-green-500/30 text-xs text-green-200">
+                    ℹ️ <strong>Do NOT collect cash.</strong> Hand the official delegate badge and confirm check-in.
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmCheckin}
+                    disabled={isSubmitting}
+                    className="w-full py-4 px-4 rounded-2xl bg-green-600 hover:bg-green-500 active:scale-95 text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>
+                      {isSubmitting
+                        ? 'Recording...'
+                        : `Confirm Check-In & Issue Badge (by ${activeVolunteer})`}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* CASE C: SPOT CASH / DESK PAYMENT (PAYING AT THE COUNTER) */}
+              {modalState === 'confirm' && !selectedDelegate.isPrePaidOnline && (
                 <div className="space-y-3.5">
                   
                   {/* Payment Mode Toggle Buttons */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-[#e5c158] uppercase tracking-wider">
-                      Payment Mode at Desk:
+                      Select How Delegate is Paying at Desk:
                     </label>
                     <div className="grid grid-cols-2 gap-2 bg-[#140b07] p-1 rounded-2xl border border-[#d4af37]/30">
                       <button
@@ -1094,7 +1153,7 @@ export default function ContinuousScanner({ onClose }) {
                         }`}
                       >
                         <Smartphone className="w-4 h-4" />
-                        <span>📱 UPI / GPay (₹150)</span>
+                        <span>📱 Desk UPI (₹150)</span>
                       </button>
                     </div>
                   </div>
@@ -1135,10 +1194,10 @@ export default function ContinuousScanner({ onClose }) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs font-black text-blue-300 uppercase tracking-wider">
-                            📱 VERIFY ₹150 UPI / GPAY PAYMENT
+                            📱 VERIFY ₹150 DESK UPI PAYMENT
                           </p>
                           <p className="text-[11px] text-[#f4ece1]/80 mt-0.5">
-                            Delegate scanned QR & sent ₹150 to church bank account.
+                            Delegate scanned desk QR & sent ₹150 to church bank account.
                           </p>
                         </div>
                         <span className="text-2xl font-black text-blue-400 bg-black/50 px-3 py-1.5 rounded-xl border border-blue-500/40">
