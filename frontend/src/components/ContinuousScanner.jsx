@@ -13,6 +13,66 @@ const VOLUNTEERS = [
   { id: 'neha', name: 'Neha Miriam Jose' },
 ];
 
+const STUDENT_CLASS_MAP = {
+  // Class 10 A
+  'EDESSA-2026-1603': 'Class 10 A', // Ananya c renjith
+  'EDESSA-2026-PRE26': 'Class 10 A', // Caroline Sojan
+  'EDESSA-2026-6557': 'Class 10 A', // Femi Shijo
+  'EDESSA-2026-9358': 'Class 10 A', // Richa james
+  'EDESSA-2026-8646': 'Class 10 A', // Sharon Ajoy
+
+  // Class 10 B
+  'EDESSA-2026-9678': 'Class 10 B', // Alphonse Joy
+  'EDESSA-2026-PRE27': 'Class 10 B', // Anna Rose Jobin
+  'EDESSA-2026-5749': 'Class 10 B', // Deon George
+
+  // Class 11 A
+  'EDESSA-2026-4370': 'Class 11 A', // Aleena Biju
+  'EDESSA-2026-4857': 'Class 11 A', // Alna Rose Mathew
+  'EDESSA-2026-2232': 'Class 11 A', // Angel Shiby
+  'EDESSA-2026-4869': 'Class 11 A', // Ashin siby
+  'EDESSA-2026-PRE14': 'Class 11 A', // Edwin Shiju
+  'EDESSA-2026-5684': 'Class 11 A', // Jephin
+  'EDESSA-2026-8804': 'Class 11 A', // Josin jithesh
+  'EDESSA-2026-PRE15': 'Class 11 A', // Leona Limichan
+  'EDESSA-2026-PRE31': 'Class 11 A', // Megan Anna Shaji
+
+  // Class 11 B
+  'EDESSA-2026-2883': 'Class 11 B', // Abhiya Maria
+  'EDESSA-2026-1621': 'Class 11 B', // Alan Jose
+  'EDESSA-2026-9155': 'Class 11 B', // Amal Binoy
+  'EDESSA-2026-9887': 'Class 11 B', // Ayona Jain
+  'EDESSA-2026-2230': 'Class 11 B', // GODWEENA THARAPPEL
+  'EDESSA-2026-6772': 'Class 11 B', // Jismy Biju
+  'EDESSA-2026-1165': 'Class 11 B', // Jiya Raju
+  'EDESSA-2026-1633': 'Class 11 B', // Sandeep Sunny
+  'EDESSA-2026-PRE05': 'Class 11 B', // Aiwin C M
+
+  // Class 12 A
+  'EDESSA-2026-PRE29': 'Class 12 A', // Alan Sony (Chemmarappallil)
+  'EDESSA-2026-9935': 'Class 12 A', // Alona Alby (Vembil)
+  'EDESSA-2026-4352': 'Class 12 A', // Eiden Shiji (Kavumkal)
+  'EDESSA-2026-PRE07': 'Class 12 A', // Jiyas A S (Aruvickachalil)
+  'EDESSA-2026-8199': 'Class 12 A', // Mathew Siby (Kaniyampadickal)
+  'EDESSA-2026-6939': 'Class 12 A', // Melbin Joseph (Vattakunnel)
+  'EDESSA-2026-2277': 'Class 12 A', // Ansa maria sajan (Plammattathil)
+
+  // Class 12 B
+  'EDESSA-2026-7888': 'Class 12 B', // Aleena Mathews (Kocheettathottu)
+  'EDESSA-2026-PRE23': 'Class 12 B', // Alphy Boby (Palakkudiyil)
+  'EDESSA-2026-9571': 'Class 12 B', // Ann maria p Robin (Porkkattil)
+  'EDESSA-2026-5938': 'Class 12 B', // Ansel Jiji (Vettathel)
+  'EDESSA-2026-8568': 'Class 12 B', // Ivin Sherin Thayyil (Thayyil)
+  'EDESSA-2026-7255': 'Class 12 B', // Jithin biju (Olickal)
+  'EDESSA-2026-4659': 'Class 12 B', // Jiyorn Jomon (Parinthirickal)
+  'EDESSA-2026-9565': 'Class 12 B', // Merin Reji (Poriyath)
+  'EDESSA-2026-9531': 'Class 12 B', // Merin Treesa Reji (Poriyathu)
+  'EDESSA-2026-2524': 'Class 12 B', // Merwin Reji Antony (Poriyath)
+  'EDESSA-2026-8674': 'Class 12 B', // Romal james (Paruvasseril)
+  'EDESSA-2026-5133': 'Class 12 B', // Rosemol Sebastian (Chottayil)
+  'EDESSA-2026-2105': 'Class 12 B', // Tessa Ajoy (Mundathanathu)
+};
+
 export default function ContinuousScanner({ onClose }) {
   const [activeVolunteer, setActiveVolunteer] = useState(() => {
     return localStorage.getItem('edessa_active_volunteer') || 'Dona George';
@@ -33,6 +93,7 @@ export default function ContinuousScanner({ onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'present' | 'cash_in_hand' | 'upi_online' | 'dona' | 'neha'
   const [selectedWard, setSelectedWard] = useState('all');
+  const [selectedClass, setSelectedClass] = useState('all');
 
   const allDelegatesRef = useRef([]);
 
@@ -98,6 +159,12 @@ export default function ContinuousScanner({ onClose }) {
             }
           }
 
+          // Detect class from sheet Column G or student map
+          let studentClass = STUDENT_CLASS_MAP[ticketId] || '';
+          if (!studentClass && c[6] && String(c[6].v || '').toLowerCase().includes('class')) {
+            studentClass = String(c[6].v || '').trim();
+          }
+
           return {
             rowId: idx + 2,
             ticketId,
@@ -106,6 +173,7 @@ export default function ContinuousScanner({ onClose }) {
             phone,
             parish,
             age,
+            studentClass,
             email,
             txnRef: (txnRef && txnRef !== 'SPOT-CASH') ? txnRef : '',
             paymentMode: isPrePaidOnline ? 'Pre-Paid Online (UPI)' : 'Spot Cash (Pay at Desk)',
@@ -272,6 +340,7 @@ export default function ContinuousScanner({ onClose }) {
     if (!matchSearch) return false;
 
     if (selectedWard !== 'all' && item.parish !== selectedWard) return false;
+    if (selectedClass !== 'all' && item.studentClass !== selectedClass) return false;
 
     if (statusFilter === 'pending') return !item.isPresent;
     if (statusFilter === 'present') return item.isPresent;
@@ -526,7 +595,8 @@ export default function ContinuousScanner({ onClose }) {
                 )}
               </div>
 
-              <div className="sm:w-48">
+              {/* Ward Selector Dropdown */}
+              <div className="sm:w-44">
                 <select
                   value={selectedWard}
                   onChange={(e) => setSelectedWard(e.target.value)}
@@ -537,6 +607,23 @@ export default function ContinuousScanner({ onClose }) {
                     const count = allDelegates.filter(d => d.parish === w).length;
                     return <option key={idx} value={w}>{w} ({count})</option>;
                   })}
+                </select>
+              </div>
+
+              {/* Class Selector Dropdown */}
+              <div className="sm:w-44">
+                <select
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="w-full py-3 px-3 rounded-xl bg-[#140b07] border border-amber-500/40 text-amber-300 text-xs font-black focus:outline-none focus:border-amber-400 cursor-pointer"
+                >
+                  <option value="all">All Classes</option>
+                  <option value="Class 10 A">🎓 Class 10 A ({allDelegates.filter(d => d.studentClass === 'Class 10 A').length})</option>
+                  <option value="Class 10 B">🎓 Class 10 B ({allDelegates.filter(d => d.studentClass === 'Class 10 B').length})</option>
+                  <option value="Class 11 A">🎓 Class 11 A ({allDelegates.filter(d => d.studentClass === 'Class 11 A').length})</option>
+                  <option value="Class 11 B">🎓 Class 11 B ({allDelegates.filter(d => d.studentClass === 'Class 11 B').length})</option>
+                  <option value="Class 12 A">🎓 Class 12 A ({allDelegates.filter(d => d.studentClass === 'Class 12 A').length})</option>
+                  <option value="Class 12 B">🎓 Class 12 B ({allDelegates.filter(d => d.studentClass === 'Class 12 B').length})</option>
                 </select>
               </div>
 
@@ -614,10 +701,17 @@ export default function ContinuousScanner({ onClose }) {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="text-base sm:text-lg font-bold text-white leading-tight">
-                          {delegate.fullName}
-                        </h3>
-                        <p className="text-xs text-[#e5c158] font-medium mt-0.5 flex items-center gap-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base sm:text-lg font-bold text-white leading-tight">
+                            {delegate.fullName}
+                          </h3>
+                          {delegate.studentClass && (
+                            <span className="text-[10px] font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/40">
+                              🎓 {delegate.studentClass}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[#e5c158] font-medium mt-1 flex items-center gap-1.5">
                           <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-[#d96b27]" />
                           <span>{delegate.parish}</span>
                           <span className="text-gray-500">•</span>
@@ -1052,9 +1146,13 @@ export default function ContinuousScanner({ onClose }) {
                     <span className="text-white/60 text-[10px] uppercase font-bold">HOUSE NAME</span>
                     <p className="font-bold text-white truncate">{selectedDelegate.houseName}</p>
                   </div>
-                  <div className="col-span-2">
+                  <div>
                     <span className="text-white/60 text-[10px] uppercase font-bold">PHONE NUMBER</span>
                     <p className="font-mono font-medium text-white">{selectedDelegate.phone || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60 text-[10px] uppercase font-bold">STUDENT CLASS</span>
+                    <p className="font-bold text-amber-300">{selectedDelegate.studentClass || 'Parish Youth'}</p>
                   </div>
                 </div>
               </div>
