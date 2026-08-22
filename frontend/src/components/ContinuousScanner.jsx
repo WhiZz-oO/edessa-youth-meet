@@ -113,23 +113,50 @@ export default function ContinuousScanner({ onClose }) {
       const parsed = JSON.parse(jsonStr);
 
       if (parsed && parsed.table && Array.isArray(parsed.table.rows)) {
+        const cols = parsed.table.cols || [];
+
+        // Dynamically find exact column indexes from headers
+        let colTicket = 0;
+        let colName = 1;
+        let colHouse = 2;
+        let colPhone = 3;
+        let colWard = 4;
+        let colAge = 5;
+        let colClass = 6;
+        let colEmail = 7;
+        let colPayMode = 8;
+        let colTxn = 9;
+        let colAtt = 12;
+
+        cols.forEach((col, idx) => {
+          if (!col) return;
+          const label = (col.label || '').toLowerCase();
+          if (label.includes('ticket') || label.includes('pass id') || label.includes('edessa')) colTicket = idx;
+          else if (label === 'full name' || label === 'name') colName = idx;
+          else if (label.includes('house')) colHouse = idx;
+          else if (label.includes('phone') || label.includes('mobile')) colPhone = idx;
+          else if (label.includes('ward') || label.includes('parish')) colWard = idx;
+          else if (label.includes('age')) colAge = idx;
+          else if (label.includes('class')) colClass = idx;
+          else if (label.includes('email') || label.includes('mail')) colEmail = idx;
+          else if (label.includes('payment') || label.includes('mode')) colPayMode = idx;
+          else if (label.includes('transaction') || label.includes('ref') || label.includes('utr')) colTxn = idx;
+          else if (label.includes('attendance') || label.includes('present')) colAtt = idx;
+        });
+
         const delegates = parsed.table.rows.map((r, idx) => {
           const c = r.c || [];
-          const ticketId = c[0] ? String(c[0].v || '').trim() : '';
-          const fullName = c[1] ? String(c[1].v || '').trim() : '';
-          const houseName = c[2] ? String(c[2].v || '').trim() : '—';
-          const phone = c[3] ? String(c[3].v || '').trim() : '';
-          const parish = c[4] ? String(c[4].v || '').trim() : 'Ward';
-          const age = c[5] ? String(c[5].v || '').trim() : '';
-          
-          // Column 6 is the new Class column (Col G)
-          const rawSheetClass = c[6] ? String(c[6].v || '').trim() : '';
-          const email = c[7] ? String(c[7].v || '').trim() : '';
-          const paymentMode = c[8] ? String(c[8].v || '').trim() : (c[7] ? String(c[7].v || '').trim() : 'Spot Cash');
-          const txnRef = c[9] ? String(c[9].v || '').trim() : (c[8] ? String(c[8].v || '').trim() : 'SPOT-CASH');
-          
-          // Attendance is in Column 12 (Col M) now that Class is Column 6 (Col G)
-          const attendanceRaw = c[12] ? String(c[12].v || '').trim() : (c[11] ? String(c[11].v || '').trim() : '');
+          const ticketId = c[colTicket] ? String(c[colTicket].v || '').trim() : '';
+          const fullName = c[colName] ? String(c[colName].v || '').trim() : '';
+          const houseName = c[colHouse] ? String(c[colHouse].v || '').trim() : '—';
+          const phone = c[colPhone] ? String(c[colPhone].v || '').trim() : '';
+          const parish = c[colWard] ? String(c[colWard].v || '').trim() : 'Ward';
+          const age = c[colAge] ? String(c[colAge].v || '').trim() : '';
+          const rawSheetClass = c[colClass] ? String(c[colClass].v || '').trim() : '';
+          const email = c[colEmail] ? String(c[colEmail].v || '').trim() : '';
+          const paymentMode = c[colPayMode] ? String(c[colPayMode].v || '').trim() : 'Spot Cash';
+          const txnRef = c[colTxn] ? String(c[colTxn].v || '').trim() : 'SPOT-CASH';
+          const attendanceRaw = c[colAtt] ? String(c[colAtt].v || '').trim() : '';
 
           const isPresent = attendanceRaw.toUpperCase().includes('PRESENT');
           
@@ -148,11 +175,12 @@ export default function ContinuousScanner({ onClose }) {
             checkedInTime = match ? match[1].replace(/by.*|•.*/i, '').trim() : 'Checked In';
           }
 
-          const isPrePaidOnline = paymentMode.toLowerCase().includes('gpay') || 
-                                  paymentMode.toLowerCase().includes('upi') || 
-                                  paymentMode.toLowerCase().includes('google') || 
-                                  paymentMode.toLowerCase().includes('online') || 
-                                  (txnRef && txnRef !== 'SPOT-CASH' && txnRef.length > 5);
+          // Strict Cash vs UPI logic
+          const payLower = paymentMode.toLowerCase();
+          const isExplicitCash = payLower.includes('cash') || payLower.includes('spot') || txnRef === 'SPOT-CASH';
+          const isExplicitUpi = (payLower.includes('gpay') || payLower.includes('upi') || payLower.includes('online')) && !isExplicitCash;
+
+          const isPrePaidOnline = isExplicitUpi || (!isExplicitCash && txnRef && txnRef !== 'SPOT-CASH' && txnRef.length > 5);
 
           let isCash = !isPrePaidOnline;
           
@@ -166,7 +194,7 @@ export default function ContinuousScanner({ onClose }) {
 
           // Standardize student class (e.g. '10 A' -> 'Class 10 A')
           let studentClass = STUDENT_CLASS_MAP[ticketId] || '';
-          if (rawSheetClass) {
+          if (rawSheetClass && rawSheetClass !== 'YOUTH') {
             studentClass = rawSheetClass.toLowerCase().startsWith('class') ? rawSheetClass : `Class ${rawSheetClass}`;
           }
 
