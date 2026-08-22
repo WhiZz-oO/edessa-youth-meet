@@ -134,9 +134,14 @@ export default function TicketModal({ ticketData, onClose }) {
               <p className="text-xs font-mono text-[#f4ece1] mt-0.5">{ticketData.phone || '—'}</p>
             </div>
 
-            <div className="col-span-2 pt-2 border-t border-[#382015] flex justify-between text-xs text-[#f4ece1]/80">
+            <div className="col-span-2 pt-2 border-t border-[#382015] flex items-center justify-between text-xs text-[#f4ece1]/80 flex-wrap gap-2">
               <span><strong>Age:</strong> {ticketData.age || '—'} yrs</span>
-              {ticketData.email && <span className="truncate max-w-[200px]"><strong>Email:</strong> {ticketData.email}</span>}
+              {ticketData.studentClass && (
+                <span className="text-amber-300 font-bold bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/40">
+                  {ticketData.studentClass.startsWith('Class') ? '🎓 ' + ticketData.studentClass : (ticketData.studentClass === 'Parish Youth' ? '🌟 Parish Youth' : '🎓 Class ' + ticketData.studentClass)}
+                </span>
+              )}
+              {ticketData.email && ticketData.email !== '—' && <span className="truncate max-w-[160px]"><strong>Email:</strong> {ticketData.email}</span>}
             </div>
           </div>
 

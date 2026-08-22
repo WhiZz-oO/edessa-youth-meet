@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   CheckCircle, ShieldCheck, Sparkles, User, Phone, MapPin, Mail, 
-  Banknote, Loader2, Home, Calendar, Clock, Check
+  Banknote, Loader2, Home, Calendar, Clock, Check, GraduationCap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GOOGLE_SHEETS_CONFIG } from '../data/googleSheetsConfig';
@@ -15,6 +15,8 @@ export default function Registration() {
     phone: '',
     parish: '',
     age: '',
+    categoryType: 'youth', // 'youth' | 'student'
+    studentClass: '',      // '10 A' | '10 B' | '11 A' | '11 B' | '12 A' | '12 B' | 'Other Class'
     email: '',
   });
 
@@ -40,6 +42,10 @@ export default function Registration() {
       minute: '2-digit',
     });
 
+    const classValue = formData.categoryType === 'student'
+      ? (formData.studentClass || 'Student')
+      : 'Parish Youth';
+
     const newEntry = {
       ticketId: newTicketId,
       fullName: formData.fullName.trim(),
@@ -47,7 +53,9 @@ export default function Registration() {
       phone: formData.phone.trim(),
       parish: formData.parish.trim(), // Ward
       age: formData.age.trim(),
-      email: formData.email.trim(),
+      studentClass: classValue,
+      category: formData.categoryType === 'student' ? 'Student' : 'Youth',
+      email: formData.email.trim() || '—',
       paymentMode: 'Spot Cash',
       txnRef: 'SPOT-CASH',
       dateRegistered: dateFormatted,
@@ -237,6 +245,66 @@ export default function Registration() {
                   </div>
                 </div>
               </div>
+
+              {/* Participant Category (Parish Youth vs School Student) */}
+              <div className="space-y-2 pt-1">
+                <label className="block text-xs font-bold uppercase text-[#e5c158]">
+                  Participant Category <span className="text-red-400">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2.5 bg-[#140b07] p-1.5 rounded-2xl border border-[#d4af37]/30">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, categoryType: 'youth', studentClass: '' })}
+                    className={`py-3 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      formData.categoryType === 'youth'
+                        ? 'bg-[#d96b27] text-white shadow-lg font-black'
+                        : 'text-[#f4ece1]/70 hover:text-white'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4 text-[#e5c158]" />
+                    <span>🌟 Parish Youth</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, categoryType: 'student' })}
+                    className={`py-3 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      formData.categoryType === 'student'
+                        ? 'bg-amber-500 text-black shadow-lg font-black'
+                        : 'text-[#f4ece1]/70 hover:text-white'
+                    }`}
+                  >
+                    <GraduationCap className="w-4 h-4" />
+                    <span>🎓 School Student</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Class Dropdown (Visible only when School Student is selected) */}
+              {formData.categoryType === 'student' && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/40 space-y-1.5 animate-in fade-in duration-200">
+                  <label className="block text-xs font-extrabold uppercase text-amber-300 flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-amber-400" />
+                    <span>Select Your Class &amp; Division <span className="text-red-400">*</span></span>
+                  </label>
+                  <select
+                    name="studentClass"
+                    value={formData.studentClass}
+                    onChange={handleChange}
+                    required={formData.categoryType === 'student'}
+                    className="w-full px-4 py-3 rounded-xl bg-[#1a0f0a] border border-amber-500/50 text-amber-300 font-bold placeholder-gray-500 focus:outline-none focus:border-amber-400 text-sm cursor-pointer"
+                  >
+                    <option value="">Choose Class (10 A, 10 B, 11 A, 11 B, 12 A, 12 B)</option>
+                    <option value="10 A">Class 10 A</option>
+                    <option value="10 B">Class 10 B</option>
+                    <option value="11 A">Class 11 A</option>
+                    <option value="11 B">Class 11 B</option>
+                    <option value="12 A">Class 12 A</option>
+                    <option value="12 B">Class 12 B</option>
+                    <option value="Other Class">Other Class</option>
+                  </select>
+                </div>
+              )}
 
               {/* Phone & Age */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
