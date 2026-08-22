@@ -121,10 +121,15 @@ export default function ContinuousScanner({ onClose }) {
           const phone = c[3] ? String(c[3].v || '').trim() : '';
           const parish = c[4] ? String(c[4].v || '').trim() : 'Ward';
           const age = c[5] ? String(c[5].v || '').trim() : '';
-          const email = c[6] ? String(c[6].v || '').trim() : '';
-          const paymentMode = c[7] ? String(c[7].v || '').trim() : 'Spot Cash';
-          const txnRef = c[8] ? String(c[8].v || '').trim() : 'SPOT-CASH';
-          const attendanceRaw = c[11] ? String(c[11].v || '').trim() : '';
+          
+          // Column 6 is the new Class column (Col G)
+          const rawSheetClass = c[6] ? String(c[6].v || '').trim() : '';
+          const email = c[7] ? String(c[7].v || '').trim() : '';
+          const paymentMode = c[8] ? String(c[8].v || '').trim() : (c[7] ? String(c[7].v || '').trim() : 'Spot Cash');
+          const txnRef = c[9] ? String(c[9].v || '').trim() : (c[8] ? String(c[8].v || '').trim() : 'SPOT-CASH');
+          
+          // Attendance is in Column 12 (Col M) now that Class is Column 6 (Col G)
+          const attendanceRaw = c[12] ? String(c[12].v || '').trim() : (c[11] ? String(c[11].v || '').trim() : '');
 
           const isPresent = attendanceRaw.toUpperCase().includes('PRESENT');
           
@@ -159,10 +164,10 @@ export default function ContinuousScanner({ onClose }) {
             }
           }
 
-          // Detect class from sheet Column G or student map
+          // Standardize student class (e.g. '10 A' -> 'Class 10 A')
           let studentClass = STUDENT_CLASS_MAP[ticketId] || '';
-          if (!studentClass && c[6] && String(c[6].v || '').toLowerCase().includes('class')) {
-            studentClass = String(c[6].v || '').trim();
+          if (rawSheetClass) {
+            studentClass = rawSheetClass.toLowerCase().startsWith('class') ? rawSheetClass : `Class ${rawSheetClass}`;
           }
 
           return {
