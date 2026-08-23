@@ -13,65 +13,128 @@ const VOLUNTEERS = [
   { id: 'neha', name: 'Neha Miriam Jose' },
 ];
 
-const STUDENT_CLASS_MAP = {
-  // Class 10 A
-  'EDESSA-2026-1603': 'Class 10 A', // Ananya c renjith
-  'EDESSA-2026-PRE26': 'Class 10 A', // Caroline Sojan
-  'EDESSA-2026-6557': 'Class 10 A', // Femi Shijo
-  'EDESSA-2026-9358': 'Class 10 A', // Richa james
-  'EDESSA-2026-8646': 'Class 10 A', // Sharon Ajoy
-
-  // Class 10 B
-  'EDESSA-2026-9678': 'Class 10 B', // Alphonse Joy
-  'EDESSA-2026-PRE27': 'Class 10 B', // Anna Rose Jobin
-  'EDESSA-2026-5749': 'Class 10 B', // Deon George
-
-  // Class 11 A
-  'EDESSA-2026-4370': 'Class 11 A', // Aleena Biju
-  'EDESSA-2026-4857': 'Class 11 A', // Alna Rose Mathew
-  'EDESSA-2026-2232': 'Class 11 A', // Angel Shiby
-  'EDESSA-2026-4869': 'Class 11 A', // Ashin siby
-  'EDESSA-2026-PRE14': 'Class 11 A', // Edwin Shiju
-  'EDESSA-2026-5684': 'Class 11 A', // Jephin
-  'EDESSA-2026-8804': 'Class 11 A', // Josin jithesh
-  'EDESSA-2026-PRE15': 'Class 11 A', // Leona Limichan
-  'EDESSA-2026-PRE31': 'Class 11 A', // Megan Anna Shaji
-
-  // Class 11 B
-  'EDESSA-2026-2883': 'Class 11 B', // Abhiya Maria
-  'EDESSA-2026-1621': 'Class 11 B', // Alan Jose
-  'EDESSA-2026-9155': 'Class 11 B', // Amal Binoy
-  'EDESSA-2026-9887': 'Class 11 B', // Ayona Jain
-  'EDESSA-2026-2230': 'Class 11 B', // GODWEENA THARAPPEL
-  'EDESSA-2026-6772': 'Class 11 B', // Jismy Biju
-  'EDESSA-2026-1165': 'Class 11 B', // Jiya Raju
-  'EDESSA-2026-1633': 'Class 11 B', // Sandeep Sunny
-  'EDESSA-2026-PRE05': 'Class 11 B', // Aiwin C M
-
-  // Class 12 A
-  'EDESSA-2026-PRE29': 'Class 12 A', // Alan Sony (Chemmarappallil)
-  'EDESSA-2026-9935': 'Class 12 A', // Alona Alby (Vembil)
-  'EDESSA-2026-4352': 'Class 12 A', // Eiden Shiji (Kavumkal)
-  'EDESSA-2026-PRE07': 'Class 12 A', // Jiyas A S (Aruvickachalil)
-  'EDESSA-2026-8199': 'Class 12 A', // Mathew Siby (Kaniyampadickal)
-  'EDESSA-2026-6939': 'Class 12 A', // Melbin Joseph (Vattakunnel)
-  'EDESSA-2026-2277': 'Class 12 A', // Ansa maria sajan (Plammattathil)
-
-  // Class 12 B
-  'EDESSA-2026-7888': 'Class 12 B', // Aleena Mathews (Kocheettathottu)
-  'EDESSA-2026-PRE23': 'Class 12 B', // Alphy Boby (Palakkudiyil)
-  'EDESSA-2026-9571': 'Class 12 B', // Ann maria p Robin (Porkkattil)
-  'EDESSA-2026-5938': 'Class 12 B', // Ansel Jiji (Vettathel)
-  'EDESSA-2026-8568': 'Class 12 B', // Ivin Sherin Thayyil (Thayyil)
-  'EDESSA-2026-7255': 'Class 12 B', // Jithin biju (Olickal)
-  'EDESSA-2026-4659': 'Class 12 B', // Jiyorn Jomon (Parinthirickal)
-  'EDESSA-2026-9565': 'Class 12 B', // Merin Reji (Poriyath)
-  'EDESSA-2026-9531': 'Class 12 B', // Merin Treesa Reji (Poriyathu)
-  'EDESSA-2026-2524': 'Class 12 B', // Merwin Reji Antony (Poriyath)
-  'EDESSA-2026-8674': 'Class 12 B', // Romal james (Paruvasseril)
-  'EDESSA-2026-5133': 'Class 12 B', // Rosemol Sebastian (Chottayil)
-  'EDESSA-2026-2105': 'Class 12 B', // Tessa Ajoy (Mundathanathu)
+const TICKET_GROUP_MAP = {
+  "EDESSA-2026-PRE04": "ORGANIZER",
+  "EDESSA-2026-PRE16": "ORGANIZER",
+  "EDESSA-2026-UPI01": "ORGANIZER",
+  "EDESSA-2026-2520": "ORGANIZER",
+  "EDESSA-2026-7622": "ORGANIZER",
+  "EDESSA-2026-2791": "ORGANIZER",
+  "EDESSA-2026-9586": "ORGANIZER",
+  "EDESSA-2026-5321": "ORGANIZER",
+  "EDESSA-2026-PRE05": "RED 1",
+  "EDESSA-2026-PRE11": "RED 2",
+  "EDESSA-2026-5749": "RED 3",
+  "EDESSA-2026-9678": "RED 4",
+  "EDESSA-2026-5840": "RED 5",
+  "EDESSA-2026-8804": "RED 6",
+  "EDESSA-2026-3459": "RED 7",
+  "EDESSA-2026-2512": "RED 8",
+  "EDESSA-2026-6101": "RED 9",
+  "EDESSA-2026-PRE06": "RED 10",
+  "EDESSA-2026-2105": "RED 11",
+  "EDESSA-2026-7636": "RED 12",
+  "EDESSA-2026-3004": "RED 13",
+  "EDESSA-2026-9358": "RED 14",
+  "EDESSA-2026-5421": "RED 15",
+  "EDESSA-2026-PRE21": "BLUE 1",
+  "EDESSA-2026-PRE12": "BLUE 2",
+  "EDESSA-2026-7255": "BLUE 3",
+  "EDESSA-2026-1621": "BLUE 4",
+  "EDESSA-2026-1656": "BLUE 5",
+  "EDESSA-2026-4352": "BLUE 6",
+  "EDESSA-2026-9177": "BLUE 7",
+  "EDESSA-2026-3422": "BLUE 8",
+  "EDESSA-2026-6670": "BLUE 9",
+  "EDESSA-2026-PRE19": "BLUE 10",
+  "EDESSA-2026-8646": "BLUE 11",
+  "EDESSA-2026-9887": "BLUE 12",
+  "EDESSA-2026-9935": "BLUE 13",
+  "EDESSA-2026-2277": "BLUE 14",
+  "EDESSA-2026-5477": "BLUE 15",
+  "EDESSA-2026-PRE24": "GREEN 1",
+  "EDESSA-2026-PRE07": "GREEN 2",
+  "EDESSA-2026-5938": "GREEN 3",
+  "EDESSA-2026-2587": "GREEN 4",
+  "EDESSA-2026-1568": "GREEN 5",
+  "EDESSA-2026-4869": "GREEN 6",
+  "EDESSA-2026-6363": "GREEN 7",
+  "EDESSA-2026-8996": "GREEN 8",
+  "EDESSA-2026-PRE22": "GREEN 9",
+  "EDESSA-2026-9565": "GREEN 10",
+  "EDESSA-2026-9571": "GREEN 11",
+  "EDESSA-2026-6772": "GREEN 12",
+  "EDESSA-2026-9147": "GREEN 13",
+  "EDESSA-2026-4875": "GREEN 14",
+  "EDESSA-2026-PRE25": "YELLOW 1",
+  "EDESSA-2026-5720": "YELLOW 2",
+  "EDESSA-2026-3313": "YELLOW 3",
+  "EDESSA-2026-8674": "YELLOW 4",
+  "EDESSA-2026-9740": "YELLOW 5",
+  "EDESSA-2026-9155": "YELLOW 6",
+  "EDESSA-2026-4611": "YELLOW 7",
+  "EDESSA-2026-4345": "YELLOW 8",
+  "EDESSA-2026-PRE26": "YELLOW 9",
+  "EDESSA-2026-4857": "YELLOW 10",
+  "EDESSA-2026-6557": "YELLOW 11",
+  "EDESSA-2026-9531": "YELLOW 12",
+  "EDESSA-2026-8227": "YELLOW 13",
+  "EDESSA-2026-4251": "YELLOW 14",
+  "EDESSA-2026-PRE29": "BROWN 1",
+  "EDESSA-2026-3610": "BROWN 2",
+  "EDESSA-2026-5595": "BROWN 3",
+  "EDESSA-2026-9726": "BROWN 4",
+  "EDESSA-2026-1633": "BROWN 5",
+  "EDESSA-2026-9660": "BROWN 6",
+  "EDESSA-2026-5685": "BROWN 7",
+  "EDESSA-2026-3993": "BROWN 8",
+  "EDESSA-2026-PRE27": "BROWN 9",
+  "EDESSA-2026-1165": "BROWN 10",
+  "EDESSA-2026-5133": "BROWN 11",
+  "EDESSA-2026-2230": "BROWN 12",
+  "EDESSA-2026-7904": "BROWN 13",
+  "EDESSA-2026-PRE30": "ORANGE 1",
+  "EDESSA-2026-1199": "ORANGE 2",
+  "EDESSA-2026-2524": "ORANGE 3",
+  "EDESSA-2026-5684": "ORANGE 4",
+  "EDESSA-2026-5152": "ORANGE 5",
+  "EDESSA-2026-8199": "ORANGE 6",
+  "EDESSA-2026-5430": "ORANGE 7",
+  "EDESSA-2026-5156": "ORANGE 8",
+  "EDESSA-2026-PRE31": "ORANGE 9",
+  "EDESSA-2026-7888": "ORANGE 10",
+  "EDESSA-2026-4370": "ORANGE 11",
+  "EDESSA-2026-2883": "ORANGE 12",
+  "EDESSA-2026-3392": "ORANGE 13",
+  "EDESSA-2026-PRE09": "VIOLET 1",
+  "EDESSA-2026-6939": "VIOLET 2",
+  "EDESSA-2026-4659": "VIOLET 3",
+  "EDESSA-2026-9722": "VIOLET 4",
+  "EDESSA-2026-6369": "VIOLET 5",
+  "EDESSA-2026-4634": "VIOLET 6",
+  "EDESSA-2026-4256": "VIOLET 7",
+  "EDESSA-2026-5750": "VIOLET 8",
+  "EDESSA-2026-PRE15": "VIOLET 9",
+  "EDESSA-2026-2232": "VIOLET 10",
+  "EDESSA-2026-9637": "VIOLET 11",
+  "EDESSA-2026-1213": "VIOLET 12",
+  "EDESSA-2026-1326": "VIOLET 13"
 };
+
+const getGroupBadgeStyle = (group) => {
+  if (!group) return 'bg-gray-700 text-gray-300 border-gray-600';
+  const g = group.toUpperCase();
+  if (g.startsWith('RED')) return 'bg-red-500/20 text-red-400 border-red-500/40';
+  if (g.startsWith('BLUE')) return 'bg-blue-500/20 text-blue-400 border-blue-500/40';
+  if (g.startsWith('GREEN')) return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+  if (g.startsWith('YELLOW')) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+  if (g.startsWith('BROWN')) return 'bg-amber-800/30 text-amber-300 border-amber-700/50';
+  if (g.startsWith('ORANGE')) return 'bg-orange-500/20 text-orange-400 border-orange-500/40';
+  if (g.startsWith('VIOLET')) return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+  if (g.startsWith('ORG') || g.startsWith('VOL')) return 'bg-[#d96b27]/20 text-[#e5c158] border-[#d4af37]/40';
+  return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+};
+
 
 export default function ContinuousScanner({ onClose }) {
   const [activeVolunteer, setActiveVolunteer] = useState(() => {
@@ -94,6 +157,7 @@ export default function ContinuousScanner({ onClose }) {
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'present' | 'cash_in_hand' | 'upi_online' | 'dona' | 'neha'
   const [selectedWard, setSelectedWard] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedGroup, setSelectedGroup] = useState('all');
 
   const allDelegatesRef = useRef([]);
 
@@ -115,7 +179,7 @@ export default function ContinuousScanner({ onClose }) {
       if (parsed && parsed.table && Array.isArray(parsed.table.rows)) {
         const cols = parsed.table.cols || [];
 
-        // Dynamically find exact column indexes from headers (Col M = 12 is Class, Col L = 11 is Attendance)
+        // Dynamically find exact column indexes from headers (Col M = 12 is Class, Col N = 13 is Group Name)
         let colTicket = 0;
         let colName = 1;
         let colHouse = 2;
@@ -127,6 +191,7 @@ export default function ContinuousScanner({ onClose }) {
         let colTxn = 8;
         let colAtt = 11;   // Column L
         let colClass = 12; // Column M
+        let colGroup = 13; // Column N
 
         cols.forEach((col, idx) => {
           if (!col) return;
@@ -138,6 +203,7 @@ export default function ContinuousScanner({ onClose }) {
           else if (label.includes('ward') || label.includes('parish')) colWard = idx;
           else if (label.includes('age')) colAge = idx;
           else if (label.includes('class')) colClass = idx;
+          else if (label.includes('group')) colGroup = idx;
           else if (label.includes('email') || label.includes('mail')) colEmail = idx;
           else if (label.includes('payment') || label.includes('mode')) colPayMode = idx;
           else if (label.includes('transaction') || label.includes('ref') || label.includes('utr')) colTxn = idx;
@@ -153,6 +219,7 @@ export default function ContinuousScanner({ onClose }) {
           const parish = c[colWard] ? String(c[colWard].v || '').trim() : 'Ward';
           const age = c[colAge] ? String(c[colAge].v || '').trim() : '';
           const rawSheetClass = c[colClass] ? String(c[colClass].v || '').trim() : '';
+          const rawSheetGroup = c[colGroup] ? String(c[colGroup].v || '').trim() : '';
           const email = c[colEmail] ? String(c[colEmail].v || '').trim() : '';
           const paymentMode = c[colPayMode] ? String(c[colPayMode].v || '').trim() : 'Spot Cash';
           const txnRef = c[colTxn] ? String(c[colTxn].v || '').trim() : 'SPOT-CASH';
@@ -205,6 +272,7 @@ export default function ContinuousScanner({ onClose }) {
           }
 
           const isStudent = studentClass !== 'Parish Youth';
+          const groupName = rawSheetGroup || TICKET_GROUP_MAP[ticketId] || 'RED 1';
 
           return {
             rowId: idx + 2,
@@ -216,6 +284,7 @@ export default function ContinuousScanner({ onClose }) {
             age,
             studentClass,
             isStudent,
+            groupName,
             email,
             txnRef: (txnRef && txnRef !== 'SPOT-CASH') ? txnRef : '',
             paymentMode: isPrePaidOnline ? 'Pre-Paid Online (UPI)' : 'Spot Cash (Pay at Desk)',
@@ -383,6 +452,13 @@ export default function ContinuousScanner({ onClose }) {
 
     if (selectedWard !== 'all' && item.parish !== selectedWard) return false;
     if (selectedClass !== 'all' && item.studentClass !== selectedClass) return false;
+    if (selectedGroup !== 'all') {
+      if (selectedGroup === 'ORGANIZER') {
+        if (item.groupName !== 'ORGANIZER') return false;
+      } else {
+        if (!item.groupName.startsWith(selectedGroup)) return false;
+      }
+    }
 
     if (statusFilter === 'pending') return !item.isPresent;
     if (statusFilter === 'present') return item.isPresent;
@@ -638,7 +714,7 @@ export default function ContinuousScanner({ onClose }) {
               </div>
 
               {/* Ward Selector Dropdown */}
-              <div className="sm:w-44">
+              <div className="sm:w-36">
                 <select
                   value={selectedWard}
                   onChange={(e) => setSelectedWard(e.target.value)}
@@ -652,14 +728,33 @@ export default function ContinuousScanner({ onClose }) {
                 </select>
               </div>
 
+              {/* Group Selector Dropdown */}
+              <div className="sm:w-40">
+                <select
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  className="w-full py-3 px-3 rounded-xl bg-[#140b07] border border-[#d96b27]/60 text-[#e5c158] text-xs font-black focus:outline-none focus:border-amber-400 cursor-pointer"
+                >
+                  <option value="all">All Groups</option>
+                  <option value="RED">🔴 RED ({allDelegates.filter(d => d.groupName.startsWith('RED')).length})</option>
+                  <option value="BLUE">🔵 BLUE ({allDelegates.filter(d => d.groupName.startsWith('BLUE')).length})</option>
+                  <option value="GREEN">🟢 GREEN ({allDelegates.filter(d => d.groupName.startsWith('GREEN')).length})</option>
+                  <option value="YELLOW">🟡 YELLOW ({allDelegates.filter(d => d.groupName.startsWith('YELLOW')).length})</option>
+                  <option value="BROWN">🟤 BROWN ({allDelegates.filter(d => d.groupName.startsWith('BROWN')).length})</option>
+                  <option value="ORANGE">🟠 ORANGE ({allDelegates.filter(d => d.groupName.startsWith('ORANGE')).length})</option>
+                  <option value="VIOLET">🟣 VIOLET ({allDelegates.filter(d => d.groupName.startsWith('VIOLET')).length})</option>
+                  <option value="ORGANIZER">⭐ Organizers ({allDelegates.filter(d => d.groupName === 'ORGANIZER').length})</option>
+                </select>
+              </div>
+
               {/* Class & Category Selector Dropdown */}
-              <div className="sm:w-48">
+              <div className="sm:w-40">
                 <select
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
                   className="w-full py-3 px-3 rounded-xl bg-[#140b07] border border-amber-500/40 text-amber-300 text-xs font-black focus:outline-none focus:border-amber-400 cursor-pointer"
                 >
-                  <option value="all">All Categories ({allDelegates.length})</option>
+                  <option value="all">All Categories</option>
                   <option value="Parish Youth">🌟 Parish Youth ({allDelegates.filter(d => d.studentClass === 'Parish Youth').length})</option>
                   <option value="Class 10 A">🎓 Class 10 A ({allDelegates.filter(d => d.studentClass === 'Class 10 A').length})</option>
                   <option value="Class 10 B">🎓 Class 10 B ({allDelegates.filter(d => d.studentClass === 'Class 10 B').length})</option>
@@ -748,13 +843,14 @@ export default function ContinuousScanner({ onClose }) {
                           <h3 className="text-base sm:text-lg font-bold text-white leading-tight">
                             {delegate.fullName}
                           </h3>
-                          {delegate.isStudent ? (
-                            <span className="text-[10px] font-black text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/40 inline-flex items-center gap-1 shadow-sm">
-                              🎓 {delegate.studentClass}
+                          {delegate.groupName && (
+                            <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border inline-flex items-center gap-1 shadow-sm ${getGroupBadgeStyle(delegate.groupName)}`}>
+                              {delegate.groupName === 'ORGANIZER' ? '⭐ ORG' : delegate.groupName}
                             </span>
-                          ) : (
-                            <span className="text-[10px] font-bold text-[#ffb076] bg-[#d96b27]/20 px-2.5 py-0.5 rounded-full border border-[#d96b27]/40 inline-flex items-center gap-1">
-                              🌟 Youth
+                          )}
+                          {delegate.isStudent && (
+                            <span className="text-[10px] font-bold text-amber-300/90 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 inline-flex items-center gap-1">
+                              🎓 {delegate.studentClass}
                             </span>
                           )}
                         </div>
@@ -1063,8 +1159,9 @@ export default function ContinuousScanner({ onClose }) {
                   <tr>
                     <th className="py-3.5 px-4">Pass ID</th>
                     <th className="py-3.5 px-4">Delegate Name</th>
+                    <th className="py-3.5 px-4">Group &amp; ID</th>
                     <th className="py-3.5 px-4">Ward / House</th>
-                    <th className="py-3.5 px-4">Phone</th>
+                    <th className="py-3.5 px-4">Category</th>
                     <th className="py-3.5 px-4">Fee Mode / Cash Type</th>
                     <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4">Admitted By</th>
@@ -1086,11 +1183,16 @@ export default function ContinuousScanner({ onClose }) {
                         <td className="py-3 px-4 font-bold text-white">
                           {item.fullName}
                         </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border inline-flex items-center gap-1 ${getGroupBadgeStyle(item.groupName)}`}>
+                            {item.groupName}
+                          </span>
+                        </td>
                         <td className="py-3 px-4 text-[#f4ece1]/80">
                           {item.parish} • {item.houseName}
                         </td>
-                        <td className="py-3 px-4 font-mono text-[#f4ece1]/70">
-                          {item.phone || '—'}
+                        <td className="py-3 px-4 text-[#e5c158] font-semibold">
+                          {item.isStudent ? '🎓 ' + item.studentClass : '🌟 Youth'}
                         </td>
                         <td className="py-3 px-4 font-semibold">
                           {item.isCash ? (
@@ -1184,6 +1286,21 @@ export default function ContinuousScanner({ onClose }) {
                   </span>
                 </div>
 
+                {/* Group & ID Badge Callout Box */}
+                <div className="p-3 rounded-2xl bg-[#1c120c] border-2 border-[#d4af37] flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-black text-[#e5c158] tracking-wider">
+                      ASSIGNED GROUP &amp; ID BADGE:
+                    </span>
+                    <p className="text-xl font-black text-white mt-0.5 flex items-center gap-2">
+                      {selectedDelegate.groupName === 'ORGANIZER' ? '⭐ ORGANIZER / VOLUNTEER' : selectedDelegate.groupName}
+                    </p>
+                  </div>
+                  <span className={`px-3 py-1.5 rounded-xl font-black text-xs uppercase shadow-md border ${getGroupBadgeStyle(selectedDelegate.groupName)}`}>
+                    {selectedDelegate.groupName}
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                   <div>
                     <span className="text-white/60 text-[10px] uppercase font-bold">WARD NUMBER</span>
@@ -1199,7 +1316,7 @@ export default function ContinuousScanner({ onClose }) {
                   </div>
                   <div>
                     <span className="text-white/60 text-[10px] uppercase font-bold">CATEGORY / CLASS</span>
-                    <p className="font-extrabold text-sm text-amber-300 flex items-center gap-1 mt-0.5">
+                    <p className="font-extrabold text-xs text-amber-300 flex items-center gap-1 mt-0.5">
                       {selectedDelegate.isStudent ? (
                         <>
                           <span>🎓</span>
