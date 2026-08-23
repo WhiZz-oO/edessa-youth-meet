@@ -278,7 +278,7 @@ export default function ContinuousScanner({ onClose }) {
             } else {
               studentClass = rawSheetClass.toLowerCase().startsWith('class') ? rawSheetClass : `Class ${rawSheetClass}`;
             }
-          
+          }
 
           const isStudent = studentClass !== 'Parish Youth';
           const groupName = rawSheetGroup || TICKET_GROUP_MAP[ticketId] || 'RED 1';
