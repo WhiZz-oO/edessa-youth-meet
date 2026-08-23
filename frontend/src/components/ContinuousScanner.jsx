@@ -514,6 +514,23 @@ export default function ContinuousScanner({ onClose }) {
   const nehaUpiCount = nehaCheckins.filter(d => !d.isCash).length;
   const nehaUpiCash = nehaUpiCount * 150;
 
+  const orgMembers = allDelegates.filter(d => d.groupName === 'ORGANIZER');
+  const orgPresent = orgMembers.filter(d => d.isPresent);
+
+  const groupStats = GROUPS_LIST.map(g => {
+    const members = allDelegates.filter(d => d.groupName.startsWith(g.name));
+    const present = members.filter(d => d.isPresent);
+    const pending = members.filter(d => !d.isPresent);
+    const turnout = members.length > 0 ? Math.round((present.length / members.length) * 100) : 0;
+    return {
+      ...g,
+      total: members.length,
+      present: present.length,
+      pending: pending.length,
+      turnout
+    };
+  });
+
   return (
     <div className="fixed inset-0 z-50 bg-[#0d0705] text-white flex flex-col overflow-y-auto font-sans">
       
