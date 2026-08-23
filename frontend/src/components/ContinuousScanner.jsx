@@ -115,18 +115,18 @@ export default function ContinuousScanner({ onClose }) {
       if (parsed && parsed.table && Array.isArray(parsed.table.rows)) {
         const cols = parsed.table.cols || [];
 
-        // Dynamically find exact column indexes from headers
+        // Dynamically find exact column indexes from headers (Col M = 12 is Class, Col L = 11 is Attendance)
         let colTicket = 0;
         let colName = 1;
         let colHouse = 2;
         let colPhone = 3;
         let colWard = 4;
         let colAge = 5;
-        let colClass = 6;
-        let colEmail = 7;
-        let colPayMode = 8;
-        let colTxn = 9;
-        let colAtt = 12;
+        let colEmail = 6;
+        let colPayMode = 7;
+        let colTxn = 8;
+        let colAtt = 11;   // Column L
+        let colClass = 12; // Column M
 
         cols.forEach((col, idx) => {
           if (!col) return;
@@ -192,11 +192,19 @@ export default function ContinuousScanner({ onClose }) {
             }
           }
 
-          // Standardize student class (e.g. '10 A' -> 'Class 10 A')
-          let studentClass = STUDENT_CLASS_MAP[ticketId] || '';
-          if (rawSheetClass && rawSheetClass !== 'YOUTH') {
-            studentClass = rawSheetClass.toLowerCase().startsWith('class') ? rawSheetClass : `Class ${rawSheetClass}`;
+          // Standardize student class or Parish Youth from Column M
+          let studentClass = 'Parish Youth';
+          if (rawSheetClass) {
+            if (rawSheetClass.toUpperCase() === 'YOUTH' || rawSheetClass.toLowerCase().includes('youth')) {
+              studentClass = 'Parish Youth';
+            } else {
+              studentClass = rawSheetClass.toLowerCase().startsWith('class') ? rawSheetClass : `Class ${rawSheetClass}`;
+            }
+          } else if (STUDENT_CLASS_MAP[ticketId]) {
+            studentClass = STUDENT_CLASS_MAP[ticketId];
           }
+
+          const isStudent = studentClass !== 'Parish Youth';
 
           return {
             rowId: idx + 2,
@@ -207,6 +215,7 @@ export default function ContinuousScanner({ onClose }) {
             parish,
             age,
             studentClass,
+            isStudent,
             email,
             txnRef: (txnRef && txnRef !== 'SPOT-CASH') ? txnRef : '',
             paymentMode: isPrePaidOnline ? 'Pre-Paid Online (UPI)' : 'Spot Cash (Pay at Desk)',
@@ -643,14 +652,15 @@ export default function ContinuousScanner({ onClose }) {
                 </select>
               </div>
 
-              {/* Class Selector Dropdown */}
-              <div className="sm:w-44">
+              {/* Class & Category Selector Dropdown */}
+              <div className="sm:w-48">
                 <select
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
                   className="w-full py-3 px-3 rounded-xl bg-[#140b07] border border-amber-500/40 text-amber-300 text-xs font-black focus:outline-none focus:border-amber-400 cursor-pointer"
                 >
-                  <option value="all">All Classes</option>
+                  <option value="all">All Categories ({allDelegates.length})</option>
+                  <option value="Parish Youth">🌟 Parish Youth ({allDelegates.filter(d => d.studentClass === 'Parish Youth').length})</option>
                   <option value="Class 10 A">🎓 Class 10 A ({allDelegates.filter(d => d.studentClass === 'Class 10 A').length})</option>
                   <option value="Class 10 B">🎓 Class 10 B ({allDelegates.filter(d => d.studentClass === 'Class 10 B').length})</option>
                   <option value="Class 11 A">🎓 Class 11 A ({allDelegates.filter(d => d.studentClass === 'Class 11 A').length})</option>
@@ -738,9 +748,13 @@ export default function ContinuousScanner({ onClose }) {
                           <h3 className="text-base sm:text-lg font-bold text-white leading-tight">
                             {delegate.fullName}
                           </h3>
-                          {delegate.studentClass && (
-                            <span className="text-[10px] font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/40">
+                          {delegate.isStudent ? (
+                            <span className="text-[10px] font-black text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/40 inline-flex items-center gap-1 shadow-sm">
                               🎓 {delegate.studentClass}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-[#ffb076] bg-[#d96b27]/20 px-2.5 py-0.5 rounded-full border border-[#d96b27]/40 inline-flex items-center gap-1">
+                              🌟 Youth
                             </span>
                           )}
                         </div>
@@ -1184,8 +1198,20 @@ export default function ContinuousScanner({ onClose }) {
                     <p className="font-mono font-medium text-white">{selectedDelegate.phone || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-white/60 text-[10px] uppercase font-bold">STUDENT CLASS</span>
-                    <p className="font-bold text-amber-300">{selectedDelegate.studentClass || 'Parish Youth'}</p>
+                    <span className="text-white/60 text-[10px] uppercase font-bold">CATEGORY / CLASS</span>
+                    <p className="font-extrabold text-sm text-amber-300 flex items-center gap-1 mt-0.5">
+                      {selectedDelegate.isStudent ? (
+                        <>
+                          <span>🎓</span>
+                          <span>{selectedDelegate.studentClass}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>🌟</span>
+                          <span className="text-[#ffe8aa]">Parish Youth</span>
+                        </>
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
