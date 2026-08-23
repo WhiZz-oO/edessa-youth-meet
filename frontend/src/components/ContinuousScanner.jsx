@@ -3,7 +3,8 @@ import {
   CheckCircle2, AlertTriangle, X, Volume2, VolumeX, 
   Users, Banknote, Search, RefreshCw, Sparkles, ShieldCheck, Zap,
   UserCheck, Award, Lock, ArrowRight, User, Phone, Home, MapPin,
-  Clock, Filter, ChevronDown, Check, Smartphone, CreditCard, DollarSign
+  Clock, Filter, ChevronDown, Check, Smartphone, CreditCard, DollarSign,
+  GraduationCap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GOOGLE_SHEETS_CONFIG } from '../data/googleSheetsConfig';
