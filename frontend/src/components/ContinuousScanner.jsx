@@ -690,6 +690,71 @@ export default function ContinuousScanner({ onClose }) {
 
           </div>
 
+          {/* 1-Click Group Quick-Filter Ribbon */}
+          <div className="bg-[#1c120c] p-3 rounded-2xl border border-[#d4af37]/30 space-y-2.5">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] uppercase font-black tracking-wider text-[#e5c158] flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-[#d96b27]" />
+                Filter by Group:
+              </span>
+              {selectedGroup !== 'all' && (
+                <button
+                  onClick={() => setSelectedGroup('all')}
+                  className="text-[10px] text-amber-300 hover:underline font-bold"
+                >
+                  Clear Group Filter ✕
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-thin">
+              <button
+                type="button"
+                onClick={() => setSelectedGroup('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  selectedGroup === 'all'
+                    ? 'bg-[#e5c158] text-[#1c120c] shadow-md font-black'
+                    : 'text-[#f4ece1]/70 hover:text-white bg-[#140b07] border border-[#382015]'
+                }`}
+              >
+                All Groups ({allDelegates.length})
+              </button>
+
+              {GROUPS_LIST.map((g, idx) => {
+                const count = allDelegates.filter(d => d.groupName.startsWith(g.name)).length;
+                const isSelected = selectedGroup === g.name;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedGroup(isSelected ? 'all' : g.name)}
+                    className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer border ${
+                      isSelected
+                        ? `${g.bar} text-white shadow-lg font-black scale-105`
+                        : `${g.bg} ${g.text} ${g.border} hover:brightness-125`
+                    }`}
+                  >
+                    <span>{g.name === 'RED' ? '🔴' : g.name === 'BLUE' ? '🔵' : g.name === 'GREEN' ? '🟢' : g.name === 'YELLOW' ? '🟡' : g.name === 'BROWN' ? '🟤' : g.name === 'ORANGE' ? '🟠' : '🟣'}</span>
+                    <span>{g.name} ({count})</span>
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setSelectedGroup(selectedGroup === 'ORGANIZER' ? 'all' : 'ORGANIZER')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer border ${
+                  selectedGroup === 'ORGANIZER'
+                    ? 'bg-[#d96b27] text-white shadow-lg font-black scale-105'
+                    : 'bg-[#2a1a12] text-[#e5c158] border-[#d4af37]/40 hover:brightness-125'
+                }`}
+              >
+                <span>⭐</span>
+                <span>Organizers ({orgMembers.length})</span>
+              </button>
+            </div>
+          </div>
+
           {/* Search & Filter Bar */}
           <div className="bg-[#1c120c] p-3.5 rounded-2xl border border-[#d4af37]/30 space-y-3">
             <div className="flex flex-col sm:flex-row gap-2.5">
@@ -1152,7 +1217,7 @@ export default function ContinuousScanner({ onClose }) {
           </div>
 
           {/* Full Master Table */}
-          <div className="bg-[#1c120c] rounded-3xl border border-[#d4af37]/30 overflow-hidden shadow-2xl">
+          <div id="admin-master-table" className="bg-[#1c120c] rounded-3xl border border-[#d4af37]/30 overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#2a1a12] border-b border-[#382015] text-[#e5c158] font-cinzel uppercase text-[10px] tracking-wider">
