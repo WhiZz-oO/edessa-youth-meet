@@ -122,6 +122,16 @@ const TICKET_GROUP_MAP = {
   "EDESSA-2026-1326": "VIOLET 13"
 };
 
+const GROUPS_LIST = [
+  { name: 'RED', color: '#ef4444', border: 'border-red-500/40', bg: 'bg-red-500/10', text: 'text-red-400', bar: 'bg-red-500' },
+  { name: 'BLUE', color: '#3b82f6', border: 'border-blue-500/40', bg: 'bg-blue-500/10', text: 'text-blue-400', bar: 'bg-blue-500' },
+  { name: 'GREEN', color: '#10b981', border: 'border-emerald-500/40', bg: 'bg-emerald-500/10', text: 'text-emerald-400', bar: 'bg-emerald-500' },
+  { name: 'YELLOW', color: '#eab308', border: 'border-yellow-500/40', bg: 'bg-yellow-500/10', text: 'text-yellow-300', bar: 'bg-yellow-400' },
+  { name: 'BROWN', color: '#d97706', border: 'border-amber-700/50', bg: 'bg-amber-800/20', text: 'text-amber-300', bar: 'bg-amber-600' },
+  { name: 'ORANGE', color: '#f97316', border: 'border-orange-500/40', bg: 'bg-orange-500/10', text: 'text-orange-400', bar: 'bg-orange-500' },
+  { name: 'VIOLET', color: '#a855f7', border: 'border-purple-500/40', bg: 'bg-purple-500/10', text: 'text-purple-400', bar: 'bg-purple-500' },
+];
+
 const getGroupBadgeStyle = (group) => {
   if (!group) return 'bg-gray-700 text-gray-300 border-gray-600';
   const g = group.toUpperCase();
